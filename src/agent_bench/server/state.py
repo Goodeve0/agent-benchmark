@@ -72,9 +72,9 @@ class AppState:
         try:
             loader = TaskLoader(self.spec_dir)
             self.tasks = loader.load_all_tasks()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             import warnings
-            warnings.warn(f"任务加载失败: {e}")
+            warnings.warn(f"任务加载失败: {e}", stacklevel=2)
             self.tasks = []
 
     def get_task_ids(self) -> list[str]:
@@ -200,7 +200,7 @@ class AppState:
             else:
                 traces = await runner.run_evaluation(tasks)
                 # 评分
-                for task, trace in zip(tasks, traces):
+                for task, trace in zip(tasks, traces, strict=False):
                     report = await scorer.score_task(trace, task)
                     run.completed_tasks += 1
                     run.current_task = task.task_id
@@ -210,7 +210,7 @@ class AppState:
                 # 构建结果
                 agent_info = adapter.get_agent_info()
                 reports = []
-                for task, trace in zip(tasks, traces):
+                for task, trace in zip(tasks, traces, strict=False):
                     report = await scorer.score_task(trace, task)
                     reports.append(report)
                 result = scorer.build_result_from_reports(agent_info, reports)
@@ -328,8 +328,9 @@ class AppState:
 
     def get_dimensions(self) -> list[dict]:
         """返回维度定义列表。"""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         dim_path = Path(self.spec_dir).parent / "dimensions.yaml"
         if not dim_path.exists():
@@ -379,7 +380,7 @@ class AppState:
                     if adapter_type in ("raw_api", "data_analyst"):
                         adapter_kwargs["model"] = model
                     adapter = get_adapter(adapter_type, **adapter_kwargs)
-            except Exception as e:
+            except Exception:  # noqa: BLE001
                 continue
 
             runner = EvalRunner(adapter=adapter, user_agent_mock=judge_mock)
@@ -387,7 +388,7 @@ class AppState:
 
             traces = await runner.run_evaluation(tasks)
             reports = []
-            for task, trace in zip(tasks, traces):
+            for task, trace in zip(tasks, traces, strict=False):
                 report = await scorer.score_task(trace, task)
                 reports.append(report)
             result = scorer.build_result_from_reports(adapter.get_agent_info(), reports)
