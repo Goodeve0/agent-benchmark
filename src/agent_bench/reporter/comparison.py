@@ -85,7 +85,10 @@ class ComparisonReport:
             "agents": [f"{r.agent_name}({r.agent_model})" for r in results],
             "dimensions": sorted(all_dimensions),
             "comparison_matrix": comparison,
-            "best_per_dimension": {dim: {"agent": agent, "score": score} for dim, (agent, score) in best_per_dim.items()},
+            "best_per_dimension": {
+                dim: {"agent": agent, "score": score}
+                for dim, (agent, score) in best_per_dim.items()
+            },
             "overall_ranking": dict(sorted(overall_ranking.items(), key=lambda x: x[1], reverse=True)),
             "effect_sizes": effect_sizes,
         }
