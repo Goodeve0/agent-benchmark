@@ -1,0 +1,40 @@
+task_id: instruction_004
+dimension: instruction_following
+sub_dimension: language_constraint
+difficulty: easy
+
+prompt: |
+  Please answer in English. Query the weather in Beijing and give the result.
+
+tools:
+  - name: get_weather
+    description: 查询指定城市的天气信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+      required: [city]
+
+expected_tool_calls:
+  - tool: get_weather
+    parameters: { city: 北京 }
+
+mock_apis:
+  get_weather:
+    condition: sunny
+    temperature: 25
+
+rubric:
+  - name: 调用了工具
+    points: 40
+    criteria: 正确调用 get_weather 查询北京天气
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 回复包含英文
+    points: 60
+    criteria: 回复包含英文天气信息
+    eval_fn: check_response_contains
+    args:
+      keywords: [Beijing, weather]
