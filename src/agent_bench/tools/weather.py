@@ -15,11 +15,16 @@ logger = logging.getLogger(__name__)
 
 # 模拟数据（API Key 未设置时的降级数据）
 _MOCK_WEATHER: dict[str, dict[str, Any]] = {
-    "beijing": {"temp": 22, "feels_like": 20, "humidity": 45, "description": "晴", "wind_speed": 3.2, "city": "北京"},
-    "shanghai": {"temp": 26, "feels_like": 28, "humidity": 72, "description": "多云", "wind_speed": 4.1, "city": "上海"},
-    "tokyo": {"temp": 24, "feels_like": 25, "humidity": 60, "description": "小雨", "wind_speed": 2.8, "city": "东京"},
-    "new york": {"temp": 18, "feels_like": 16, "humidity": 55, "description": "阴天", "wind_speed": 5.5, "city": "纽约"},
-    "london": {"temp": 14, "feels_like": 12, "humidity": 80, "description": "小雨", "wind_speed": 6.0, "city": "伦敦"},
+    "beijing": {"temp": 22, "feels_like": 20, "humidity": 45,
+                 "description": "晴", "wind_speed": 3.2, "city": "北京"},
+    "shanghai": {"temp": 26, "feels_like": 28, "humidity": 72,
+                  "description": "多云", "wind_speed": 4.1, "city": "上海"},
+    "tokyo": {"temp": 24, "feels_like": 25, "humidity": 60,
+               "description": "小雨", "wind_speed": 2.8, "city": "东京"},
+    "new york": {"temp": 18, "feels_like": 16, "humidity": 55,
+                  "description": "阴天", "wind_speed": 5.5, "city": "纽约"},
+    "london": {"temp": 14, "feels_like": 12, "humidity": 80,
+                "description": "小雨", "wind_speed": 6.0, "city": "伦敦"},
 }
 
 
