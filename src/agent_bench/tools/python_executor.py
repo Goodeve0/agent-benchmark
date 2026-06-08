@@ -14,7 +14,7 @@ from __future__ import annotations
 import ast
 import io
 import logging
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from typing import Any
 
 logger = logging.getLogger(__name__)
