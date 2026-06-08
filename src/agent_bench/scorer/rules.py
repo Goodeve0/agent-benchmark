@@ -14,7 +14,7 @@ v2: 新增基于审计日志 (AuditLog) 的评分规则，前缀 audit_*。
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from agent_bench.models import AgentTrace
 from agent_bench.sandbox import AuditLog
