@@ -162,13 +162,13 @@ def run_graph(
     - 可视化执行流程
     """
     try:
-        from agent_bench.graph import build_eval_graph, get_checkpointer, run_eval_graph
+        from agent_bench.graph import get_checkpointer, run_eval_graph  # noqa: F401
     except ImportError:
         console.print(
             "[red]LangGraph 未安装。[/red] 请运行: "
             "[cyan]pip install langgraph langchain-core[/cyan]"
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     # 构建过滤条件
     task_filter = None
@@ -292,7 +292,7 @@ async def _score_all_async(
     from agent_bench.models import ScoreReport
 
     reports: list[ScoreReport] = []
-    for trace, task in zip(traces, tasks):
+    for trace, task in zip(traces, tasks, strict=False):
         report = await scorer.score_task(trace, task)
         reports.append(report)
     return reports
