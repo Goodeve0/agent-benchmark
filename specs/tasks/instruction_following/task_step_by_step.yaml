@@ -1,0 +1,43 @@
+task_id: instruction_003
+dimension: instruction_following
+sub_dimension: step_by_step_output
+difficulty: easy
+
+prompt: |
+  请查询本季度的销售报告，然后分步列出解决过程，
+  每一步都要标注"第X步"。
+
+tools:
+  - name: get_sales_report
+    description: 获取指定周期的销售报告
+    parameters:
+      type: object
+      properties:
+        period:
+          type: string
+          description: 查询周期
+      required: [period]
+
+expected_tool_calls:
+  - tool: get_sales_report
+    parameters: { period: 本季度 }
+
+mock_apis:
+  get_sales_report:
+    q1: 100
+    q2: 120
+    q3: 90
+    q4: 150
+
+rubric:
+  - name: 调用了工具
+    points: 40
+    criteria: 正确调用 get_sales_report 获取销售报告
+    eval_fn: check_tool_called
+    args: { tool_name: get_sales_report }
+  - name: 回复包含分步标记
+    points: 60
+    criteria: 回复中包含"第X步"的分步格式
+    eval_fn: check_response_contains
+    args:
+      keywords: [步]
