@@ -1,0 +1,44 @@
+task_id: instruction_005
+dimension: instruction_following
+sub_dimension: length_constraint
+difficulty: easy
+
+prompt: |
+  请查询广州今天的天气，然后用一句话总结（不超过30字）。
+
+tools:
+  - name: get_weather
+    description: 查询指定城市的天气信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+      required: [city]
+
+expected_tool_calls:
+  - tool: get_weather
+    parameters: { city: 广州 }
+
+mock_apis:
+  get_weather:
+    city: 广州
+    condition: 晴
+    temperature: 30
+
+rubric:
+  - name: 调用了工具
+    points: 40
+    criteria: 正确调用 get_weather 查询广州天气
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 字数限制内
+    points: 30
+    criteria: 输出简洁，token 使用在预算内
+    eval_fn: check_token_efficiency
+    args: { max_tokens: 200 }
+  - name: 任务完成
+    points: 30
+    criteria: 成功完成天气查询和一句话总结
+    eval_fn: check_task_success
