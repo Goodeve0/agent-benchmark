@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 # 模拟搜索结果
 _MOCK_RESULTS: dict[str, list[dict[str, Any]]] = {
     "python": [
-        {"title": "Python 官方文档", "url": "https://docs.python.org", "snippet": "Python 是一种解释型、面向对象、动态数据类型的高级程序设计语言。"},
+        {
+            "title": "Python 官方文档",
+            "url": "https://docs.python.org",
+            "snippet": "Python 是一种解释型、面向对象、动态数据类型的高级程序设计语言。",
+        },
         {"title": "Python Tutorial - W3Schools", "url": "https://www.w3schools.com/python", "snippet": "Learn Python with examples and exercises."},
     ],
     "weather": [
