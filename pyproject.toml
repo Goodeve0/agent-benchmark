@@ -19,6 +19,7 @@ dependencies = [
     "rich>=13.0",
     "httpx>=0.24",
     "sqlalchemy>=2.0",
+    "apscheduler>=3.10",
 ]
 
 [project.optional-dependencies]
@@ -30,7 +31,7 @@ langgraph = ["langgraph>=0.2", "langchain-core>=0.2"]
 # Web API 后端
 web = ["fastapi>=0.100", "uvicorn>=0.20", "websockets>=11.0"]
 # 全量安装（LLM + LangGraph + Web）
-all = ["openai>=1.0", "langgraph>=0.2", "langchain-core>=0.2", "fastapi>=0.100", "uvicorn>=0.20", "websockets>=11.0", "httpx>=0.24", "sqlalchemy>=2.0"]
+all = ["openai>=1.0", "langgraph>=0.2", "langchain-core>=0.2", "fastapi>=0.100", "uvicorn>=0.20", "websockets>=11.0", "httpx>=0.24", "sqlalchemy>=2.0", "apscheduler>=3.10"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
