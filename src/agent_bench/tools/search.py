@@ -21,7 +21,11 @@ _MOCK_RESULTS: dict[str, list[dict[str, Any]]] = {
             "url": "https://docs.python.org",
             "snippet": "Python 是一种解释型、面向对象、动态数据类型的高级程序设计语言。",
         },
-        {"title": "Python Tutorial - W3Schools", "url": "https://www.w3schools.com/python", "snippet": "Learn Python with examples and exercises."},
+        {
+            "title": "Python Tutorial - W3Schools",
+            "url": "https://www.w3schools.com/python",
+            "snippet": "Learn Python with examples and exercises.",
+        },
     ],
     "weather": [
         {"title": "天气预报 - 中国气象局", "url": "http://www.cma.gov.cn", "snippet": "提供全国天气预报、气象灾害预警等信息。"},
