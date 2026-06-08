@@ -73,7 +73,10 @@ async def get_weather_impl(city: str, unit: str = "celsius") -> dict[str, Any]:
 def _get_mock_weather(city: str, unit: str = "celsius") -> dict[str, Any]:
     """获取模拟天气数据。"""
     key = city.lower().strip()
-    weather = _MOCK_WEATHER.get(key, {"temp": 20, "feels_like": 19, "humidity": 50, "description": "晴", "wind_speed": 3.0, "city": city})
+    weather = _MOCK_WEATHER.get(
+        key,
+        {"temp": 20, "feels_like": 19, "humidity": 50, "description": "晴", "wind_speed": 3.0, "city": city},
+    )
     result = {**weather}
     if unit == "fahrenheit" and "temp" in result:
         result["temp"] = round(result["temp"] * 9 / 5 + 32, 1)
