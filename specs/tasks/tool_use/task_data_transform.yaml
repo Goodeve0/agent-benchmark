@@ -1,0 +1,70 @@
+task_id: tool_use_005
+dimension: tool_use
+sub_dimension: data_processing
+difficulty: medium
+
+prompt: |
+  用户需要获取销售数据，计算平均值，并将结果格式化为 JSON 输出。
+
+tools:
+  - name: get_sales_data
+    description: 获取销售数据
+    parameters:
+      type: object
+      properties: {}
+  - name: calculate_average
+    description: 计算数据的平均值
+    parameters:
+      type: object
+      properties:
+        data:
+          type: array
+          description: 待计算的数据列表
+      required: [data]
+  - name: format_output
+    description: 将结果格式化为 JSON 输出
+    parameters:
+      type: object
+      properties:
+        result:
+          type: number
+          description: 待格式化的结果
+      required: [result]
+
+expected_tool_calls:
+  - tool: get_sales_data
+    parameters: {}
+  - tool: calculate_average
+    parameters: { data: [100, 120, 90, 150] }
+  - tool: format_output
+    parameters: { result: 115 }
+
+mock_apis:
+  get_sales_data:
+    data: [100, 120, 90, 150]
+  calculate_average:
+    average: 115
+  format_output:
+    formatted: '{"average": 115}'
+
+rubric:
+  - name: 调用销售数据工具
+    points: 25
+    criteria: 正确调用 get_sales_data
+    eval_fn: check_tool_called
+    args: { tool_name: get_sales_data }
+  - name: 调用计算工具
+    points: 25
+    criteria: 正确调用 calculate_average
+    eval_fn: check_tool_called
+    args: { tool_name: calculate_average }
+  - name: 调用格式化工具
+    points: 25
+    criteria: 正确调用 format_output
+    eval_fn: check_tool_called
+    args: { tool_name: format_output }
+  - name: 输出 JSON 格式
+    points: 25
+    criteria: 最终回复包含 JSON 格式的结果
+    eval_fn: check_response_format
+    args: { format: json }
