@@ -1,0 +1,69 @@
+task_id: reasoning_005
+dimension: reasoning
+sub_dimension: constraint_satisfaction
+difficulty: hard
+
+prompt: |
+  用户想找一家餐厅，要求：距离3公里以内，评分4.0以上。
+  请先搜索符合条件的餐厅，再查看其中一家的菜单。
+
+tools:
+  - name: search_restaurants
+    description: 搜索符合条件的餐厅
+    parameters:
+      type: object
+      properties:
+        location:
+          type: string
+          description: 位置
+        max_distance:
+          type: number
+          description: 最大距离（公里）
+        min_rating:
+          type: number
+          description: 最低评分
+      required: [location, max_distance, min_rating]
+  - name: get_restaurant_menu
+    description: 获取指定餐厅的菜单
+    parameters:
+      type: object
+      properties:
+        restaurant_id:
+          type: string
+          description: 餐厅ID
+      required: [restaurant_id]
+
+expected_tool_calls:
+  - tool: search_restaurants
+    parameters: { location: 朝阳区, max_distance: 3, min_rating: 4.0 }
+  - tool: get_restaurant_menu
+    parameters: { restaurant_id: rest_001 }
+
+mock_apis:
+  search_restaurants:
+    restaurants:
+      - name: 粤菜馆
+        price: 80
+        distance: 2km
+        rating: 4.5
+  get_restaurant_menu:
+    dishes: [红烧肉, 清蒸鱼]
+
+rubric:
+  - name: 调用了搜索工具
+    points: 30
+    criteria: 正确调用 search_restaurants 搜索餐厅
+    eval_fn: check_tool_called
+    args: { tool_name: search_restaurants }
+  - name: 参数含约束条件
+    points: 40
+    criteria: 搜索时传入了 min_rating 约束参数
+    eval_fn: check_tool_params
+    args:
+      expected_params: { min_rating: 4.0 }
+  - name: 回复包含餐厅信息
+    points: 30
+    criteria: 最终回复包含推荐的餐厅
+    eval_fn: check_response_contains
+    args:
+      keywords: [餐厅]
