@@ -14,14 +14,13 @@
 from __future__ import annotations
 
 import time
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
 from agent_bench.adapters.base import BaseAdapter
-from agent_bench.models import AgentAction, AgentTrace, ToolDef
-from agent_bench.sandbox.sandbox import Sandbox
+from agent_bench.models import AgentAction, AgentTrace
 
 
 class TopologyType(str, Enum):
