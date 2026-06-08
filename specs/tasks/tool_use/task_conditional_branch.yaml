@@ -1,0 +1,57 @@
+task_id: tool_use_004
+dimension: tool_use
+sub_dimension: conditional_call
+difficulty: medium
+
+prompt: |
+  用户想查看自己的账户余额，如果余额超过1000元，
+  请帮忙查询当前可购买的理财产品。
+
+tools:
+  - name: get_balance
+    description: 查询用户账户余额
+    parameters:
+      type: object
+      properties: {}
+  - name: get_investment_products
+    description: 查询当前可购买的理财产品列表
+    parameters:
+      type: object
+      properties: {}
+  - name: get_deposit_rate
+    description: 查询当前存款利率
+    parameters:
+      type: object
+      properties: {}
+
+expected_tool_calls:
+  - tool: get_balance
+    parameters: {}
+  - tool: get_investment_products
+    parameters: {}
+
+mock_apis:
+  get_balance:
+    balance: 5000
+  get_investment_products:
+    products: [基金A, 理财B]
+  get_deposit_rate:
+    rate: 2.1%
+
+rubric:
+  - name: 查了余额
+    points: 30
+    criteria: 正确调用 get_balance 查询账户余额
+    eval_fn: check_tool_called
+    args: { tool_name: get_balance }
+  - name: 查了理财产品
+    points: 40
+    criteria: 余额超过1000时调用了 get_investment_products
+    eval_fn: check_tool_called
+    args: { tool_name: get_investment_products }
+  - name: 回复包含理财信息
+    points: 30
+    criteria: 最终回复包含"理财"相关内容
+    eval_fn: check_response_contains
+    args:
+      keywords: [理财]
