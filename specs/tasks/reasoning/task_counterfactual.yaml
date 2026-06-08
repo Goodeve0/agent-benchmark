@@ -1,0 +1,59 @@
+task_id: reasoning_003
+dimension: reasoning
+sub_dimension: counterfactual
+difficulty: hard
+
+prompt: |
+  用户负责管理产品 SKU-1024 的库存。请先查询当前库存量和近期销售趋势，
+  如果库存低于安全线（10件），请给出补货建议。
+
+tools:
+  - name: get_inventory
+    description: 查询指定产品的库存量
+    parameters:
+      type: object
+      properties:
+        product_id:
+          type: string
+          description: 产品ID
+      required: [product_id]
+  - name: get_sales_trend
+    description: 查询指定产品的销售趋势
+    parameters:
+      type: object
+      properties:
+        product_id:
+          type: string
+          description: 产品ID
+      required: [product_id]
+
+expected_tool_calls:
+  - tool: get_inventory
+    parameters: { product_id: SKU-1024 }
+  - tool: get_sales_trend
+    parameters: { product_id: SKU-1024 }
+
+mock_apis:
+  get_inventory:
+    stock: 5
+  get_sales_trend:
+    trend: 上升
+    daily_sales: 3
+
+rubric:
+  - name: 查了库存
+    points: 30
+    criteria: 正确调用 get_inventory 查询库存
+    eval_fn: check_tool_called
+    args: { tool_name: get_inventory }
+  - name: 查了销售趋势
+    points: 30
+    criteria: 正确调用 get_sales_trend 查询销售趋势
+    eval_fn: check_tool_called
+    args: { tool_name: get_sales_trend }
+  - name: 回复包含补货建议
+    points: 40
+    criteria: 库存低于安全线时，回复包含"补货"建议
+    eval_fn: check_response_contains
+    args:
+      keywords: [补货]
