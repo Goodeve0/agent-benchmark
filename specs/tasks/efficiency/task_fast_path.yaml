@@ -1,0 +1,53 @@
+task_id: efficiency_004
+dimension: efficiency
+sub_dimension: fast_path_selection
+difficulty: medium
+
+prompt: |
+  用户想知道北京市的行政区划信息。系统提供了快速查询和精确搜索两种工具，
+  请选择最合适的工具来完成查询。
+
+tools:
+  - name: quick_lookup
+    description: 快速查询通用信息
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 查询内容
+      required: [query]
+  - name: detailed_search
+    description: 精确搜索详细信息
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 查询内容
+      required: [query]
+
+expected_tool_calls:
+  - tool: quick_lookup
+    parameters: { query: 北京市行政区划 }
+
+mock_apis:
+  quick_lookup:
+    result: 北京市
+    confidence: 0.9
+  detailed_search:
+    result: 北京市朝阳区
+    confidence: 0.99
+
+rubric:
+  - name: 调用了快速查询工具
+    points: 40
+    criteria: 选择了 quick_lookup 进行查询
+    eval_fn: check_tool_called
+    args: { tool_name: quick_lookup }
+  - name: 没调用精确搜索
+    points: 60
+    criteria: 没有调用 detailed_search，选择了更快捷的方式
+    eval_fn: check_no_extra_calls
+    args:
+      allowed_tools: [quick_lookup]
