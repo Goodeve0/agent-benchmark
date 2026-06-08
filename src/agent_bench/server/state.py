@@ -15,7 +15,7 @@ from fastapi import WebSocket
 
 from agent_bench.adapters import get_adapter
 from agent_bench.loader import TaskLoader
-from agent_bench.models import EvaluationResult, Task
+from agent_bench.models import EvaluationResult, Task, TaskTrials
 from agent_bench.runner import EvalRunner
 from agent_bench.scorer import Scorer
 from agent_bench.scorer.llm_judge import LLMJudge
@@ -139,7 +139,22 @@ class AppState:
                 return
 
             # 创建 adapter
-            adapter = get_adapter(adapter_type)
+            adapter_kwargs = {}
+            if adapter_type == "raw_api":
+                adapter_kwargs["model"] = config.get("model", "gpt-4o")
+            elif adapter_type == "data_analyst":
+                adapter_kwargs["model"] = config.get("model", "gpt-4o")
+            elif adapter_type == "multi_agent":
+                from agent_bench.adapters.multi_agent import get_multi_agent_adapter
+                topology = config.get("topology", "manager_worker")
+                adapter = get_multi_agent_adapter(
+                    topology, model=config.get("model", "gpt-4o")
+                )
+                # multi_agent 不走 get_adapter，直接跳过
+                adapter_kwargs = None
+
+            if adapter_kwargs is not None:
+                adapter = get_adapter(adapter_type, **adapter_kwargs)
 
             # 创建 scorer
             llm_judge = None
@@ -309,6 +324,79 @@ class AppState:
             entry["rank"] = i
         return sorted_history
 
+    # ---- 维度 ----
 
-# 需要导入 TaskTrials
-from agent_bench.models import TaskTrials  # noqa: E402
+    def get_dimensions(self) -> list[dict]:
+        """返回维度定义列表。"""
+        import yaml
+        from pathlib import Path
+
+        dim_path = Path(self.spec_dir).parent / "dimensions.yaml"
+        if not dim_path.exists():
+            return []
+        with open(dim_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        return data.get("dimensions", [])
+
+    # ---- 对比评测 ----
+
+    async def run_comparison(self, config: dict) -> dict:
+        """执行多 Agent 横向对比评测。"""
+        from agent_bench.reporter.comparison import ComparisonReport
+
+        adapter_types = config.get("adapter_types", ["mock"])
+        model = config.get("model", "gpt-4o")
+        selected_tasks = config.get("tasks", [])
+        judge_mock = config.get("judge_mock", True)
+
+        # 过滤任务
+        if selected_tasks:
+            tasks = [t for t in self.tasks if t.task_id in selected_tasks]
+        else:
+            tasks = self.tasks
+
+        if not tasks:
+            return {"error": "没有找到匹配的任务"}
+
+        llm_judge = None
+        if not judge_mock:
+            try:
+                llm_judge = LLMJudge(mock_mode=False)
+            except Exception:
+                llm_judge = LLMJudge(mock_mode=True)
+        else:
+            llm_judge = LLMJudge(mock_mode=True)
+
+        results = []
+        for adapter_type in adapter_types:
+            try:
+                if adapter_type == "multi_agent":
+                    from agent_bench.adapters.multi_agent import get_multi_agent_adapter
+                    topology = config.get("topology", "manager_worker")
+                    adapter = get_multi_agent_adapter(topology, model=model)
+                else:
+                    adapter_kwargs = {}
+                    if adapter_type in ("raw_api", "data_analyst"):
+                        adapter_kwargs["model"] = model
+                    adapter = get_adapter(adapter_type, **adapter_kwargs)
+            except Exception as e:
+                continue
+
+            runner = EvalRunner(adapter=adapter, user_agent_mock=judge_mock)
+            scorer = Scorer(llm_judge=llm_judge, spec_dir=self.spec_dir)
+
+            traces = await runner.run_evaluation(tasks)
+            reports = []
+            for task, trace in zip(tasks, traces):
+                report = await scorer.score_task(trace, task)
+                reports.append(report)
+            result = scorer.build_result_from_reports(adapter.get_agent_info(), reports)
+            results.append(result)
+
+        if len(results) < 2:
+            return {"error": "成功评测的适配器不足 2 个"}
+
+        report = ComparisonReport(results)
+        return report.to_dict()
+
+

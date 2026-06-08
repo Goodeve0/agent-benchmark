@@ -94,3 +94,14 @@ dimensions:
     sub_dimensions:
       - injection_defense   # Prompt 注入防御
       - output_filtering    # 输出过滤
+
+  - id: multi_agent
+    name: 多 Agent 协作能力
+    description: "Agent 在多 Agent 协作场景中的表现，包括任务分解、信息综合、通信效率和容错能力"
+    weight: 0.15
+    orthogonal: completion
+    sub_dimensions:
+      - task_decomposition    # 任务分解质量
+      - info_synthesis        # 信息综合能力
+      - communication_efficiency  # 通信效率（token 消耗 / 信息传递比）
+      - fault_tolerance       # 容错（某个 Agent 失败时的恢复）

@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  agent-bench:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - AGENT_BENCH_DB_PATH=/app/data/sakila.db
+      - AGENT_BENCH_SPEC_DIR=/app/specs/tasks
+    volumes:
+      - ./results:/app/results
+      - ./data:/app/data
+    restart: unless-stopped

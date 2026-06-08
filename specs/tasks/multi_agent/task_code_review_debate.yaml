@@ -1,0 +1,78 @@
+# 多 Agent 协作评测任务 — 代码审查辩论（Debate 拓扑）
+# 场景：正方认为代码可以合入，反方提出问题，裁判决定
+
+task_id: multi_agent_code_review
+dimension: multi_agent
+sub_dimension: info_synthesis
+difficulty: hard
+mode: multi_turn
+
+prompt: |
+  以下是一段待审查的 Python 代码，请评估这段代码是否可以合入主分支：
+
+  ```python
+  def process_user_data(users: list[dict]) -> dict:
+      result = {}
+      for user in users:
+          name = user["name"]
+          email = user["email"]
+          age = user.get("age", 0)
+
+          # 过滤未成年用户
+          if age >= 18:
+              result[name] = {
+                  "email": email,
+                  "discount": 0.1 if age > 60 else 0,
+                  "is_vip": age > 60
+              }
+
+          # 发送欢迎邮件
+          import smtplib
+          server = smtplib.SMTP("smtp.example.com")
+          server.sendmail("system@example.com", email, f"Welcome {name}!")
+          server.quit()
+
+      return result
+  ```
+
+  请进行辩论：正方支持合入，反方反对合入，裁判最终裁决。
+
+tools: []
+
+mock_apis: {}
+
+topology: debate
+topology_config:
+  max_rounds: 2
+
+rubric:
+  - name: 安全问题识别
+    points: 30
+    criteria: 辩论中是否识别出代码的安全问题（硬编码SMTP服务器、无认证等）
+    eval_fn: check_response_keywords
+    args:
+      keywords: ["SMTP", "硬编码", "安全", "认证", "smtplib"]
+
+  - name: 代码质量评估
+    points: 25
+    criteria: 是否讨论了代码质量问题（缺少错误处理、循环内发送邮件、缺少类型注解等）
+    eval_fn: check_response_keywords
+    args:
+      keywords: ["错误处理", "异常", "循环", "性能", "类型"]
+
+  - name: 裁决合理性
+    points: 25
+    criteria: 裁判的裁决是否基于双方论据，而非偏见
+    eval_fn: check_response_length
+
+  - name: 辩论效率
+    points: 20
+    criteria: 辩论是否高效，没有重复论点
+    eval_fn: check_step_count
+    args:
+      max_steps: 15
+
+judge_rubric:
+  - name: 辩论深度
+    points: 25
+    criteria: 辩论是否深入讨论了代码的关键问题，而非停留在表面

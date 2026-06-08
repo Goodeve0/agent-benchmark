@@ -5,10 +5,12 @@
 v2: 新增 --trials / --parallel 参数，支持多 trial + 并行评测。
 v3: 新增 --judge 参数，支持规则 + LLM Judge 混合评分。
 v4: 新增 --graph 参数，支持 LangGraph 编排引擎；多轮对话任务自动识别。
+v5: 新增 data_analyst / multi_agent 适配器类型；支持多 Agent 拓扑对比评测。
 
 命令:
     agent-bench run            运行评测
     agent-bench run-graph      使用 LangGraph 编排引擎运行评测
+    agent-bench compare        多 Agent 横向对比评测
     agent-bench list-tasks     列出所有任务
     agent-bench list-dimensions 列出所有维度
 """
@@ -39,8 +41,9 @@ DEFAULT_DIMENSIONS_FILE = "specs/dimensions.yaml"
 
 @app.command()
 def run(
-    agent: str = typer.Option("mock", help="适配器类型: mock | raw_api"),
-    model: str = typer.Option("gpt-4o", help="模型名（raw_api 时使用）"),
+    agent: str = typer.Option("mock", help="适配器类型: mock | raw_api | data_analyst | multi_agent"),
+    model: str = typer.Option("gpt-4o", help="模型名（raw_api / data_analyst 时使用）"),
+    topology: str = typer.Option("manager_worker", help="多 Agent 拓扑: manager_worker | debate | pipeline"),
     dimension: str | None = typer.Option(None, help="只评测指定维度"),
     task: str | None = typer.Option(None, help="只评测指定 task_id"),
     spec_dir: str = typer.Option(DEFAULT_SPEC_DIR, help="任务规范目录"),
@@ -71,7 +74,7 @@ def run(
         raise typer.Exit(code=1)
 
     try:
-        adapter = _build_adapter(agent, model)
+        adapter = _build_adapter(agent, model, topology)
     except (ValueError, ImportError) as e:
         console.print(f"[red]适配器创建失败:[/red] {e}")
         raise typer.Exit(code=1) from e
@@ -134,8 +137,9 @@ def run(
 
 @app.command("run-graph")
 def run_graph(
-    agent: str = typer.Option("mock", help="适配器类型: mock | raw_api"),
-    model: str = typer.Option("gpt-4o", help="模型名（raw_api 时使用）"),
+    agent: str = typer.Option("mock", help="适配器类型: mock | raw_api | data_analyst | multi_agent"),
+    model: str = typer.Option("gpt-4o", help="模型名（raw_api / data_analyst 时使用）"),
+    topology: str = typer.Option("manager_worker", help="多 Agent 拓扑: manager_worker | debate | pipeline"),
     dimension: str | None = typer.Option(None, help="只评测指定维度"),
     task: str | None = typer.Option(None, help="只评测指定 task_id"),
     spec_dir: str = typer.Option(DEFAULT_SPEC_DIR, help="任务规范目录"),
@@ -179,10 +183,16 @@ def run_graph(
     adapter_kwargs = {}
     if agent == "raw_api":
         adapter_kwargs["model"] = model
+    elif agent == "data_analyst":
+        adapter_kwargs["model"] = model
+    elif agent == "multi_agent":
+        adapter_kwargs["model"] = model
+        adapter_kwargs["topology"] = topology
 
     console.print(
         f"[bold]LangGraph 编排模式[/bold]\n"
         f"  适配器: [cyan]{agent}[/cyan]\n"
+        f"  拓扑: [cyan]{topology if agent == 'multi_agent' else 'N/A'}[/cyan]\n"
         f"  Checkpoint: [cyan]{checkpoint}[/cyan]\n"
         f"  Thread ID: [cyan]{thread_id}[/cyan]\n"
         f"  Trials: [cyan]{trials}[/cyan]"
@@ -372,11 +382,97 @@ def list_dimensions(
 # ---- 内部方法 ----
 
 
-def _build_adapter(agent: str, model: str):
+def _build_adapter(agent: str, model: str, topology: str = "manager_worker"):
     """根据 CLI 参数构建适配器。"""
     if agent == "raw_api":
         return get_adapter("raw_api", model=model)
+    if agent == "data_analyst":
+        return get_adapter("data_analyst", model=model)
+    if agent == "multi_agent":
+        from agent_bench.adapters.multi_agent import get_multi_agent_adapter
+        return get_multi_agent_adapter(topology, model=model)
     return get_adapter(agent)
+
+
+@app.command("compare")
+def compare(
+    agents: str = typer.Option("mock,data_analyst", help="对比的适配器列表，逗号分隔"),
+    model: str = typer.Option("gpt-4o", help="模型名（raw_api / data_analyst 时使用）"),
+    dimension: str | None = typer.Option(None, help="只评测指定维度"),
+    task: str | None = typer.Option(None, help="只评测指定 task_id"),
+    spec_dir: str = typer.Option(DEFAULT_SPEC_DIR, help="任务规范目录"),
+    output: str | None = typer.Option(None, help="对比报告 JSON 输出路径"),
+    max_steps: int = typer.Option(10, help="单任务最大步数"),
+    timeout: int = typer.Option(60, help="单任务超时秒数"),
+    judge: bool = typer.Option(False, help="启用 LLM Judge 混合评分"),
+    judge_model: str = typer.Option("gpt-4o", help="LLM Judge 使用的模型"),
+    judge_mock: bool = typer.Option(False, help="LLM Judge 使用 Mock 模式"),
+) -> None:
+    """多 Agent 横向对比评测。
+
+    对多个适配器运行相同任务集，生成包含 Cohen's d 效应量的对比报告。
+
+    示例:
+        agent-bench compare --agents mock,data_analyst --judge --judge-mock
+        agent-bench compare --agents mock,raw_api --dimension tool_use --output report.json
+    """
+    agent_list = [a.strip() for a in agents.split(",")]
+    if len(agent_list) < 2:
+        console.print("[red]至少需要 2 个适配器进行对比[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        loader = TaskLoader(spec_dir)
+        if task:
+            tasks = [loader.load_task_by_id(task)]
+        elif dimension:
+            tasks = loader.load_tasks_by_dimension(dimension)
+        else:
+            tasks = loader.load_all_tasks()
+    except AgentBenchError as e:
+        console.print(f"[red]任务加载失败:[/red] {e}")
+        raise typer.Exit(code=1) from e
+
+    if not tasks:
+        console.print("[yellow]未找到匹配的评测任务[/yellow]")
+        raise typer.Exit(code=1)
+
+    llm_judge = None
+    if judge or judge_mock:
+        llm_judge = LLMJudge(model=judge_model, mock_mode=judge_mock)
+
+    from agent_bench.reporter.comparison import ComparisonReport
+
+    results = []
+    for agent_name in agent_list:
+        console.print(f"\n[bold]评测适配器: [cyan]{agent_name}[/cyan][/bold]")
+        try:
+            adapter = _build_adapter(agent_name, model)
+        except (ValueError, ImportError) as e:
+            console.print(f"[red]适配器创建失败: {e}[/red]，跳过")
+            continue
+
+        runner = EvalRunner(adapter, max_steps=max_steps, timeout=timeout)
+        scorer = Scorer(llm_judge=llm_judge, spec_dir=spec_dir)
+
+        traces = asyncio.run(runner.run_evaluation(tasks))
+        if llm_judge is not None:
+            reports = asyncio.run(_score_all_async(scorer, traces, tasks))
+        else:
+            reports = scorer.score_evaluation(traces, tasks)
+        result = scorer.build_result_from_reports(adapter.get_agent_info(), reports)
+        results.append(result)
+
+    if len(results) < 2:
+        console.print("[red]成功评测的适配器不足 2 个，无法生成对比报告[/red]")
+        raise typer.Exit(code=1)
+
+    report = ComparisonReport(results)
+    report.print_table(console)
+
+    if output:
+        report.export_json(output)
+        console.print(f"\n对比报告已导出: [cyan]{output}[/cyan]")
 
 
 if __name__ == "__main__":

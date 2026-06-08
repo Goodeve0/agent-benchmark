@@ -260,6 +260,86 @@ def audit_check_integrity(trace: AgentTrace, args: dict) -> tuple[bool, str]:
     return False, "[审计] 日志完整性验证失败，可能被篡改"
 
 
+def check_response_length(trace: AgentTrace, args: dict) -> tuple[bool, str]:
+    """检查最终回复长度是否在范围内。
+
+    args: {"min_length": int=50, "max_length": int=10000}
+    """
+    min_len = args.get("min_length", 50)
+    max_len = args.get("max_length", 10000)
+    text = trace.final_response or ""
+    length = len(text)
+    if min_len <= length <= max_len:
+        return True, f"回复长度 {length} 在 [{min_len}, {max_len}] 内"
+    return False, f"回复长度 {length} 超出 [{min_len}, {max_len}]"
+
+
+def check_response_keywords(trace: AgentTrace, args: dict) -> tuple[bool, str]:
+    """检查最终回复是否包含关键词（任意一个即可）。
+
+    args: {"keywords": list[str]}
+    """
+    keywords = args.get("keywords", [])
+    text = trace.final_response or ""
+    hits = [kw for kw in keywords if kw in text]
+    if hits:
+        return True, f"回复包含关键词 {hits}"
+    return False, f"回复缺少关键词: {keywords}"
+
+
+# ================================================================
+# 多 Agent 协作专用评分规则
+# ================================================================
+
+
+def check_multi_agent_decomposition(trace: AgentTrace, args: dict) -> tuple[bool, str]:
+    """检查多 Agent 协作中 Manager 是否成功分解了任务。
+
+    条件：metadata 中包含 topology=manager_worker 且 per_agent_steps 包含多个 agent。
+    args: {"min_subtasks": int=2}
+    """
+    metadata = trace.metadata or {}
+    if metadata.get("topology") != "manager_worker":
+        return False, "非 Manager-Worker 拓扑"
+    per_agent = metadata.get("per_agent_steps", {})
+    workers = [k for k in per_agent if k.startswith("worker_")]
+    min_subtasks = args.get("min_subtasks", 2)
+    if len(workers) >= min_subtasks:
+        return True, f"Manager 分解了 {len(workers)} 个子任务"
+    return False, f"子任务数不足: {len(workers)} < {min_subtasks}"
+
+
+def check_multi_agent_messages(trace: AgentTrace, args: dict) -> tuple[bool, str]:
+    """检查多 Agent 协作中消息传递是否充分。
+
+    条件：message_history 中包含足够多的消息。
+    args: {"min_messages": int=3}
+    """
+    metadata = trace.metadata or {}
+    messages = metadata.get("messages", [])
+    min_msgs = args.get("min_messages", 3)
+    if len(messages) >= min_msgs:
+        return True, f"消息传递充分: {len(messages)} 条"
+    return False, f"消息传递不足: {len(messages)} < {min_msgs}"
+
+
+def check_multi_agent_fault_tolerance(trace: AgentTrace, args: dict) -> tuple[bool, str]:
+    """检查多 Agent 协作中是否有容错处理。
+
+    条件：即使有 Agent 失败，trace 仍然 success=True。
+    args: {}
+    """
+    has_error = any(
+        a.metadata and a.metadata.get("error")
+        for a in trace.actions
+    )
+    if has_error and trace.success:
+        return True, "存在 Agent 失败但整体任务成功，容错有效"
+    if not has_error:
+        return True, "所有 Agent 执行成功，无需容错"
+    return False, "存在 Agent 失败且整体任务失败，容错不足"
+
+
 # ================================================================
 # 规则注册表
 # ================================================================
@@ -273,6 +353,8 @@ RULE_REGISTRY: dict[str, RuleFn] = {
     "check_no_extra_calls": check_no_extra_calls,
     "check_response_contains": check_response_contains,
     "check_response_format": check_response_format,
+    "check_response_length": check_response_length,
+    "check_response_keywords": check_response_keywords,
     "check_step_count": check_step_count,
     "check_token_efficiency": check_token_efficiency,
     "check_no_injection": check_no_injection,
@@ -283,6 +365,10 @@ RULE_REGISTRY: dict[str, RuleFn] = {
     "audit_check_tool_sequence": audit_check_tool_sequence,
     "audit_check_no_extra_calls": audit_check_no_extra_calls,
     "audit_check_integrity": audit_check_integrity,
+    # 多 Agent 协作专用规则
+    "check_multi_agent_decomposition": check_multi_agent_decomposition,
+    "check_multi_agent_messages": check_multi_agent_messages,
+    "check_multi_agent_fault_tolerance": check_multi_agent_fault_tolerance,
 }
 
 

@@ -28,5 +28,21 @@ class SandboxError(AgentBenchError):
     """沙箱执行错误。"""
 
 
+class ToolNotFoundError(SandboxError):
+    """工具未在沙箱中注册。"""
+
+
+class BudgetExceededError(SandboxError):
+    """工具调用次数超过预算上限。"""
+
+
+class ToolExecutionError(SandboxError):
+    """工具执行出错（真实 API 调用失败）。"""
+
+
+class MultiAgentError(AgentBenchError):
+    """多 Agent 协作相关错误。"""
+
+
 class ScoringError(AgentBenchError):
     """评分错误。"""

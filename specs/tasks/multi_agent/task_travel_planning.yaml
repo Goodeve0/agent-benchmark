@@ -1,0 +1,123 @@
+# 多 Agent 协作评测任务 — 旅行规划（Manager-Worker 拓扑）
+# 场景：Manager 分解旅行需求，Workers 分别查询航班/酒店/天气，Manager 汇总
+
+task_id: multi_agent_travel_planning
+dimension: multi_agent
+sub_dimension: task_decomposition
+difficulty: medium
+mode: multi_turn
+
+prompt: |
+  请帮我规划一个3天的东京旅行计划，需要包含：
+  1. 从上海出发的往返航班信息
+  2. 住宿推荐（预算 500-800 元/晚）
+  3. 东京当地的天气预报
+  4. 每日行程安排
+
+  请使用可用的工具查询实时信息，给出详细的旅行方案。
+
+tools:
+  - name: get_weather
+    description: 查询指定城市的当前天气信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+        unit:
+          type: string
+          enum: [celsius, fahrenheit]
+      required: [city]
+
+  - name: search_web
+    description: 搜索互联网获取信息
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 搜索关键词
+        max_results:
+          type: integer
+          description: 最大返回结果数
+      required: [query]
+
+  - name: send_email
+    description: 发送邮件
+    parameters:
+      type: object
+      properties:
+        to:
+          type: string
+          description: 收件人邮箱
+        subject:
+          type: string
+          description: 邮件主题
+        body:
+          type: string
+          description: 邮件正文
+      required: [to, subject, body]
+
+mock_apis:
+  get_weather:
+    temp: 22
+    feels_like: 20
+    humidity: 60
+    description: 多云
+    wind_speed: 3.5
+    city: 东京
+    unit: celsius
+  search_web:
+    query: "东京旅行"
+    results:
+      - title: "东京旅游攻略 - 马蜂窝"
+        url: "https://www.mafengwo.cn/tokyo"
+        snippet: "东京3日游经典路线，涵盖浅草寺、秋叶原、涩谷等热门景点"
+      - title: "上海到东京航班 - 携程"
+        url: "https://www.ctrip.com/flights"
+        snippet: "上海浦东-东京成田，往返含税约2000-3500元"
+      - title: "东京酒店推荐 - Booking"
+        url: "https://www.booking.com/tokyo"
+        snippet: "新宿区域酒店，500-800元/晚，交通便利"
+    total: 3
+
+topology: manager_worker
+topology_config:
+  num_workers: 3
+  worker_assignments:
+    - "查询航班信息"
+    - "查询酒店和住宿"
+    - "查询天气和景点"
+
+rubric:
+  - name: 任务分解合理性
+    points: 30
+    criteria: Manager 是否将任务合理分解为独立的子任务，分配给 Workers
+    eval_fn: check_tool_called
+    args:
+      tool_name: get_weather
+
+  - name: 信息覆盖完整性
+    points: 25
+    criteria: 最终回复是否包含航班、酒店、天气、行程四个方面的信息
+    eval_fn: check_no_extra_calls
+    args:
+      allowed_tools: [get_weather, search_web, send_email]
+
+  - name: 结果汇总质量
+    points: 25
+    criteria: 汇总是否消除了重复信息，给出了综合性结论
+    eval_fn: check_response_length
+
+  - name: 工具使用效率
+    points: 20
+    criteria: 工具调用次数是否合理，没有冗余调用
+    eval_fn: check_step_count
+    args:
+      max_steps: 12
+
+judge_rubric:
+  - name: 旅行方案实用性
+    points: 20
+    criteria: 旅行方案是否具有实际可操作性，行程安排是否合理

@@ -1,0 +1,86 @@
+# 多 Agent 协作评测任务 — 报告生成流水线（Pipeline 拓扑）
+# 场景：Researcher → Writer → Reviewer 流水线
+
+task_id: multi_agent_report_pipeline
+dimension: multi_agent
+sub_dimension: communication_efficiency
+difficulty: medium
+mode: multi_turn
+
+prompt: |
+  请生成一份关于"2024年全球AI Agent技术发展趋势"的简报，要求：
+  1. 搜集至少3个AI Agent领域的关键趋势
+  2. 每个趋势需要包含具体数据或案例
+  3. 报告格式为：摘要 + 趋势分析 + 结论
+  4. 总字数 500-800 字
+
+tools:
+  - name: search_web
+    description: 搜索互联网获取信息
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 搜索关键词
+        max_results:
+          type: integer
+          description: 最大返回结果数
+      required: [query]
+
+mock_apis:
+  search_web:
+    query: "AI Agent 2024"
+    results:
+      - title: "AI Agent 技术趋势报告 2024"
+        url: "https://example.com/ai-agent-trends-2024"
+        snippet: "2024年AI Agent领域呈现三大趋势：多模态融合、自主决策能力提升、多Agent协作框架普及"
+      - title: "Gartner: AI Agent 市场规模将达 500 亿"
+        url: "https://example.com/gartner-report"
+        snippet: "Gartner预测2025年AI Agent市场规模将达到500亿美元，年增长率超过40%"
+      - title: "AutoGPT / CrewAI / LangGraph 竞争格局"
+        url: "https://example.com/framework-comparison"
+        snippet: "AI Agent 开发框架竞争激烈，AutoGPT、CrewAI、LangGraph 各有侧重"
+    total: 3
+
+topology: pipeline
+topology_config:
+  stages:
+    - name: researcher
+      description: "负责搜索和整理 AI Agent 相关信息"
+    - name: writer
+      description: "基于研究信息撰写报告初稿"
+    - name: reviewer
+      description: "审核报告质量，确保格式和内容达标"
+
+rubric:
+  - name: 信息搜集充分性
+    points: 25
+    criteria: Researcher 是否搜集了足够的信息供 Writer 使用
+    eval_fn: check_tool_called
+    args:
+      tool_name: search_web
+
+  - name: 报告格式合规
+    points: 25
+    criteria: 最终报告是否包含摘要、趋势分析、结论三个部分
+    eval_fn: check_response_keywords
+    args:
+      keywords: ["摘要", "趋势", "结论"]
+
+  - name: 信息传递完整性
+    points: 25
+    criteria: 从 Researcher 到 Writer 再到 Reviewer，信息是否完整传递
+    eval_fn: check_response_length
+
+  - name: 流水线效率
+    points: 25
+    criteria: 各阶段处理是否高效，没有冗余步骤
+    eval_fn: check_step_count
+    args:
+      max_steps: 15
+
+judge_rubric:
+  - name: 报告质量
+    points: 30
+    criteria: 最终报告的专业性、可读性和信息价值

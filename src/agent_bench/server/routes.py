@@ -100,11 +100,36 @@ async def get_config_options(request: Request):
     state = _get_state_from_request(request)
     task_ids = state.get_task_ids()
     return {
-        "adapter_types": ["mock", "raw_api"],
+        "adapter_types": ["mock", "raw_api", "data_analyst", "multi_agent"],
+        "multi_agent_topologies": ["manager_worker", "debate", "pipeline"],
         "tasks": task_ids,
         "num_trials_range": {"min": 1, "max": 10, "default": 1},
         "max_parallel_range": {"min": 1, "max": 16, "default": 4},
     }
+
+
+@api_router.post("/compare")
+async def create_comparison(config: dict, request: Request):
+    """创建多 Agent 横向对比评测。
+
+    请求体示例：
+    {
+        "adapter_types": ["mock", "data_analyst"],
+        "model": "gpt-4o",
+        "tasks": [],
+        "judge_mock": true
+    }
+    """
+    state = _get_state_from_request(request)
+    result = await state.run_comparison(config)
+    return result
+
+
+@api_router.get("/dimensions")
+async def get_dimensions(request: Request):
+    """获取所有评测维度定义。"""
+    state = _get_state_from_request(request)
+    return {"dimensions": state.get_dimensions()}
 
 
 # ---- WebSocket 路由 ----
