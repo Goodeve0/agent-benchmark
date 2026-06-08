@@ -1,0 +1,84 @@
+/* AgentBench Dark Theme — Catppuccin-inspired */
+:root {
+  --bg-base: #1e1e2e;
+  --bg-mantle: #181825;
+  --bg-crust: #11111b;
+  --bg-surface0: #313244;
+  --bg-surface1: #45475a;
+  --bg-surface2: #585b70;
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-muted: #6c7086;
+  --accent-primary: #6366f1;
+  --accent-green: #a6e3a1;
+  --accent-yellow: #f9e2af;
+  --accent-red: #f38ba8;
+  --accent-blue: #89b4fa;
+  --accent-purple: #cba6f7;
+  --accent-teal: #94e2d5;
+  --accent-peach: #fab387;
+  --border-color: #313244;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-mantle);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-surface2);
+}
+
+/* Ant Design dark overrides */
+.ant-card {
+  border-color: var(--border-color) !important;
+}
+.ant-table {
+  background: transparent !important;
+}
+.ant-table-thead > tr > th {
+  background: var(--bg-mantle) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+.ant-table-tbody > tr > td {
+  border-color: var(--border-color) !important;
+}
+.ant-table-tbody > tr:hover > td {
+  background: rgba(99, 102, 241, 0.06) !important;
+}
+.ant-descriptions-bordered .ant-descriptions-item-label {
+  background: var(--bg-mantle) !important;
+}
+.ant-tabs-tab {
+  color: var(--text-secondary) !important;
+}
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--accent-primary) !important;
+}
+.ant-tag {
+  border-color: transparent !important;
+}

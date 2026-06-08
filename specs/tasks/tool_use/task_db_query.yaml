@@ -1,0 +1,48 @@
+task_id: tool_use_002
+dimension: tool_use
+sub_dimension: parameter_filling
+difficulty: easy
+
+prompt: |
+  请查询用户 ID 为 1001 的订单数量。只允许使用 query_orders 工具，
+  不要调用其他工具。
+
+tools:
+  - name: query_orders
+    description: 按用户 ID 查询订单数量
+    parameters:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: 用户 ID
+          default: 1001
+      required: [user_id]
+
+expected_tool_calls:
+  - tool: query_orders
+    parameters: { user_id: 1001 }
+
+mock_apis:
+  query_orders:
+    order_count: 7
+
+rubric:
+  - name: 调用查询工具
+    points: 40
+    criteria: 调用 query_orders
+    eval_fn: check_tool_called
+    args: { tool_name: query_orders }
+  - name: 参数正确
+    points: 30
+    criteria: user_id 填充为 1001
+    eval_fn: check_tool_params
+    args:
+      tool_name: query_orders
+      expected_params: { user_id: 1001 }
+  - name: 无多余调用
+    points: 30
+    criteria: 只调用允许的工具
+    eval_fn: check_no_extra_calls
+    args:
+      allowed_tools: [query_orders]

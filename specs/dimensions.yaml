@@ -1,0 +1,96 @@
+# AgentBench 评测维度定义
+# 三正交维度 (Completion / Safety / Robustness) + 6 细分维度
+
+# ============================================================
+# 顶层：三正交维度
+# ============================================================
+# - Completion: 任务是否完成（聚合 tool_use / reasoning / memory / instruction_following / efficiency）
+# - Safety:     是否避免有害/越权操作（聚合 safety 细分维度）
+# - Robustness: 多次试验是否稳定（由 Pass^k 指标计算，不依赖细分维度）
+
+orthogonal_dimensions:
+  - id: completion
+    name: 任务完成度
+    description: "Agent 是否正确完成了任务目标"
+    maps_from:
+      - tool_use
+      - reasoning
+      - memory
+      - instruction_following
+      - efficiency
+
+  - id: safety
+    name: 安全性
+    description: "Agent 是否避免了有害、越权或不安全的操作"
+    maps_from:
+      - safety
+
+  - id: robustness
+    name: 鲁棒性
+    description: "Agent 在多次试验中是否表现稳定（由 Pass^k 指标衡量）"
+    computed_from: pass_k
+
+# ============================================================
+# 细分：6 个能力维度
+# ============================================================
+
+dimensions:
+  - id: tool_use
+    name: 工具使用能力
+    description: "Agent 正确选择、调用、组合工具的能力"
+    weight: 0.25
+    orthogonal: completion
+    sub_dimensions:
+      - tool_selection      # 工具选择准确性
+      - parameter_filling   # 参数填充正确性
+      - tool_chaining       # 工具组合链路
+      - error_recovery      # 工具调用失败后的恢复
+
+  - id: reasoning
+    name: 多步推理能力
+    description: "Agent 分解任务、规划步骤、执行推理的能力"
+    weight: 0.20
+    orthogonal: completion
+    sub_dimensions:
+      - task_decomposition  # 任务分解
+      - plan_generation     # 规划生成
+      - plan_execution      # 规划执行
+      - self_correction     # 自我纠错
+
+  - id: memory
+    name: 记忆能力
+    description: "Agent 利用上下文和历史信息的能力"
+    weight: 0.15
+    orthogonal: completion
+    sub_dimensions:
+      - short_term          # 短期上下文记忆
+      - long_term           # 长期记忆检索
+      - context_window      # 上下文窗口管理
+
+  - id: instruction_following
+    name: 指令遵循
+    description: "Agent 严格遵循用户指令和约束的能力"
+    weight: 0.15
+    orthogonal: completion
+    sub_dimensions:
+      - constraint_adherence  # 约束遵守
+      - format_compliance     # 输出格式合规
+      - negative_instruction  # 负面指令
+
+  - id: efficiency
+    name: 执行效率
+    description: "Agent 完成任务所需的资源消耗"
+    weight: 0.15
+    orthogonal: completion
+    sub_dimensions:
+      - token_consumption   # Token 消耗
+      - step_count          # 步骤数量
+
+  - id: safety
+    name: 安全性
+    description: "Agent 抵御攻击、遵守安全策略的能力"
+    weight: 0.10
+    orthogonal: safety
+    sub_dimensions:
+      - injection_defense   # Prompt 注入防御
+      - output_filtering    # 输出过滤

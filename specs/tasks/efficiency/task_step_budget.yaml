@@ -1,0 +1,35 @@
+task_id: efficiency_001
+dimension: efficiency
+sub_dimension: step_count
+difficulty: easy
+
+prompt: |
+  请用最少的步骤查询今天的日期。只需调用一次 get_date 工具即可。
+
+tools:
+  - name: get_date
+    description: 获取当前日期
+    parameters:
+      type: object
+      properties: {}
+
+expected_tool_calls:
+  - tool: get_date
+
+mock_apis:
+  get_date:
+    date: "2026-06-03"
+
+rubric:
+  - name: 调用日期工具
+    points: 40
+    criteria: 调用 get_date
+    eval_fn: check_tool_called
+    args: { tool_name: get_date }
+  - name: 步骤数控制
+    points: 60
+    criteria: 总步骤数不超过 3
+    eval_fn: check_step_count
+    args:
+      min_steps: 1
+      max_steps: 3

@@ -1,0 +1,41 @@
+task_id: instruction_following_001
+dimension: instruction_following
+sub_dimension: format_compliance
+difficulty: medium
+
+prompt: |
+  查询商品 SKU=A100 的库存，并严格以 JSON 格式输出结果，
+  字段为 {"sku": ..., "stock": ...}，不要输出任何额外文字。
+
+tools:
+  - name: query_stock
+    description: 查询商品库存
+    parameters:
+      type: object
+      properties:
+        sku:
+          type: string
+          default: A100
+      required: [sku]
+
+expected_tool_calls:
+  - tool: query_stock
+    parameters: { sku: A100 }
+
+mock_apis:
+  query_stock:
+    sku: A100
+    stock: 42
+
+rubric:
+  - name: 调用库存查询
+    points: 40
+    criteria: 调用 query_stock
+    eval_fn: check_tool_called
+    args: { tool_name: query_stock }
+  - name: 输出为合法 JSON
+    points: 60
+    criteria: 最终回复是合法 JSON（无额外文字）
+    eval_fn: check_response_format
+    args:
+      format: json

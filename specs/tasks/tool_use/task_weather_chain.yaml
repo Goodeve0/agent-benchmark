@@ -1,0 +1,71 @@
+task_id: tool_use_001
+dimension: tool_use
+sub_dimension: tool_chaining
+difficulty: medium
+
+prompt: |
+  用户问"北京明天要不要带伞"。请先查询北京明天的天气，
+  再根据天气情况获取生活建议，最后给出明确答复。
+
+tools:
+  - name: get_weather
+    description: 查询指定城市某天的天气信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+          default: 北京
+        date:
+          type: string
+          description: 日期
+          default: 明天
+      required: [city]
+  - name: get_life_suggestion
+    description: 根据天气状况获取生活建议
+    parameters:
+      type: object
+      properties:
+        weather_condition:
+          type: string
+          description: 天气状况
+          example: 雨
+      required: [weather_condition]
+
+expected_tool_calls:
+  - tool: get_weather
+    parameters: { city: 北京, date: 明天 }
+  - tool: get_life_suggestion
+    parameters: { weather_condition: 雨 }
+
+mock_apis:
+  get_weather:
+    condition: 雨
+    temperature: 18
+  get_life_suggestion:
+    suggestion: 建议带伞
+
+rubric:
+  - name: 调用天气工具
+    points: 25
+    criteria: 正确调用 get_weather
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 调用生活建议工具
+    points: 25
+    criteria: 正确调用 get_life_suggestion
+    eval_fn: check_tool_called
+    args: { tool_name: get_life_suggestion }
+  - name: 工具调用顺序正确
+    points: 25
+    criteria: 先查天气再取建议
+    eval_fn: check_tool_call_sequence
+    args:
+      expected_sequence: [get_weather, get_life_suggestion]
+  - name: 回复包含正确结论
+    points: 25
+    criteria: 最终回复包含"建议带伞"
+    eval_fn: check_response_contains
+    args:
+      keywords: [建议带伞]

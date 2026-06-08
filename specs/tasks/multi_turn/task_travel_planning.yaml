@@ -1,0 +1,121 @@
+task_id: multi_turn_001
+dimension: tool_use
+sub_dimension: multi_turn_interaction
+difficulty: hard
+mode: multi_turn
+
+prompt: |
+  我想规划一次从北京到上海的旅行，请帮我查询交通方式和天气情况，
+  并给出旅行建议。
+
+user_agent:
+  persona: |
+    一个计划出差的白领，对旅行细节比较关注。
+    会追问具体的出行时间、费用、天气穿衣建议等。
+  max_rounds: 4
+  initial_message: "我想从北京去上海出差，帮我看看怎么去比较好？"
+  success_criteria: |
+    Agent 成功查询了交通方式和天气信息，并给出了合理的旅行建议。
+
+tools:
+  - name: search_transport
+    description: 查询两个城市之间的交通方式
+    parameters:
+      type: object
+      properties:
+        from_city:
+          type: string
+          description: 出发城市
+          default: 北京
+        to_city:
+          type: string
+          description: 目的城市
+          default: 上海
+      required: [from_city, to_city]
+  - name: get_weather
+    description: 查询指定城市的天气信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+          default: 上海
+      required: [city]
+  - name: get_hotel_info
+    description: 查询城市的酒店信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+          default: 上海
+        budget:
+          type: string
+          description: 预算范围
+          default: 中等
+      required: [city]
+
+mock_apis:
+  search_transport:
+    options:
+      - type: 高铁
+        duration: "4小时30分"
+        price: 553
+      - type: 飞机
+        duration: "2小时15分"
+        price: 1200
+  get_weather:
+    city: 上海
+    condition: 晴
+    temperature: 25
+    humidity: 60
+  get_hotel_info:
+    hotels:
+      - name: 如家酒店
+        price: 300
+        rating: 4.2
+      - name: 全季酒店
+        price: 450
+        rating: 4.5
+
+rubric:
+  - name: 查询交通方式
+    points: 20
+    criteria: 调用 search_transport 查询交通信息
+    eval_fn: check_tool_called
+    args: { tool_name: search_transport }
+  - name: 查询天气
+    points: 20
+    criteria: 调用 get_weather 查询目的地天气
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 给出交通建议
+    points: 20
+    criteria: 回复中包含交通方式的建议
+    eval_fn: check_response_contains
+    args:
+      keywords: [高铁, 飞机]
+  - name: 给出天气信息
+    points: 20
+    criteria: 回复中包含天气相关信息
+    eval_fn: check_response_contains
+    args:
+      keywords: [天气, 温度, 晴]
+  - name: 多轮对话完整性
+    points: 20
+    criteria: Agent 在多轮对话中保持上下文连贯
+    eval_fn: check_response_substance
+
+judge_rubric:
+  - name: 对话自然度
+    points: 15
+    criteria: |
+      Agent 的回复是否自然流畅，是否能根据用户的追问
+      给出有针对性的回答，而不是机械重复。
+  - name: 建议实用性
+    points: 15
+    criteria: |
+      Agent 给出的旅行建议是否实用、具体，
+      是否综合考虑了交通、天气、住宿等因素。

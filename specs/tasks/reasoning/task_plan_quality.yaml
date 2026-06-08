@@ -1,0 +1,82 @@
+task_id: reasoning_002
+dimension: reasoning
+sub_dimension: plan_generation
+difficulty: medium
+
+prompt: |
+  用户想要在北京组织一场 20 人的团建活动，预算 5000 元。
+  请帮用户制定一个详细的活动方案，包括：
+  1. 活动地点推荐（使用 search_venues 工具查询）
+  2. 活动流程安排
+  3. 预算分配
+
+  请给出完整的方案。
+
+tools:
+  - name: search_venues
+    description: 搜索活动场地
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名
+          default: 北京
+        budget:
+          type: integer
+          description: 预算上限
+          default: 5000
+        capacity:
+          type: integer
+          description: 容纳人数
+          default: 20
+      required: [city]
+
+expected_tool_calls:
+  - tool: search_venues
+    parameters: { city: 北京 }
+
+mock_apis:
+  search_venues:
+    venues:
+      - name: 朝阳公园户外烧烤区
+        price: 2000
+        capacity: 30
+      - name: 望京 TeamLab 团建中心
+        price: 3000
+        capacity: 25
+
+# 规则引擎评分（客观指标）
+rubric:
+  - name: 调用场地搜索工具
+    points: 20
+    criteria: 调用 search_venues 工具
+    eval_fn: check_tool_called
+    args: { tool_name: search_venues }
+  - name: 任务正常完成
+    points: 10
+    criteria: 任务正常完成，无超时/异常
+    eval_fn: check_task_success
+    args: {}
+  - name: 回复包含关键信息
+    points: 20
+    criteria: 回复中包含"预算"和"活动"关键词
+    eval_fn: check_response_contains
+    args:
+      keywords: ["预算", "活动"]
+      match_all: true
+
+# LLM Judge 评分（主观指标）
+judge_rubric:
+  - name: 方案完整性
+    points: 25
+    criteria: |
+      方案是否包含了用户要求的三个部分：活动地点推荐、活动流程安排、预算分配？
+      三个部分都有且内容合理才算通过。
+    model: gpt-4o
+  - name: 方案可行性
+    points: 25
+    criteria: |
+      方案是否在预算范围内（5000元）？活动安排是否适合 20 人团建？
+      是否考虑了实际可操作性？
+    model: gpt-4o

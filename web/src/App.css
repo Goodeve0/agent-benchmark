@@ -1,0 +1,52 @@
+/* App-level layout styles */
+.app-layout {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: #181825;
+  border-bottom: 1px solid #313244;
+  height: 56px;
+  line-height: 56px;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #cdd6f4;
+  text-decoration: none;
+}
+
+.app-logo-icon {
+  font-size: 22px;
+  color: #6366f1;
+}
+
+.app-content {
+  padding: 24px;
+  background: #1e1e2e;
+  min-height: calc(100vh - 56px - 48px);
+}
+
+.app-footer {
+  text-align: center;
+  color: #6c7086;
+  background: #181825;
+  border-top: 1px solid #313244;
+  padding: 12px;
+  font-size: 13px;
+}
+
+/* Utility */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

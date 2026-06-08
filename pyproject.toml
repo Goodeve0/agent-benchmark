@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-bench"
+version = "0.1.0"
+description = "AgentBench — 可扩展的 Agent 能力评测基准框架"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "AgentBench" }]
+license = { text = "MIT" }
+keywords = ["agent", "llm", "benchmark", "evaluation"]
+
+dependencies = [
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "typer>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+# 真实 LLM 接入（可选，不装也能跑 MockAdapter）
+openai = ["openai>=1.0"]
+langchain = ["langchain>=0.1", "langchain-openai>=0.1"]
+# LangGraph 编排引擎（可选，不装也能跑基础评测）
+langgraph = ["langgraph>=0.2", "langchain-core>=0.2"]
+# Web API 后端
+web = ["fastapi>=0.100", "uvicorn>=0.20", "websockets>=11.0"]
+# 全量安装（LLM + LangGraph + Web）
+all = ["openai>=1.0", "langgraph>=0.2", "langchain-core>=0.2", "fastapi>=0.100", "uvicorn>=0.20", "websockets>=11.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+agent-bench = "agent_bench.cli:app"
+agent-bench-server = "agent_bench.server.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_bench"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

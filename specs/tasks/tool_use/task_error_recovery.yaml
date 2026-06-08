@@ -1,0 +1,80 @@
+task_id: tool_use_003
+dimension: tool_use
+sub_dimension: error_recovery
+difficulty: hard
+
+prompt: |
+  请帮我查询用户 ID 为 2001 的账户余额。
+  如果 get_balance 工具返回错误，请尝试使用 get_account_info 工具获取信息。
+  最终请给出用户的账户状态说明。
+
+tools:
+  - name: get_balance
+    description: 查询用户账户余额
+    parameters:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: 用户 ID
+          default: 2001
+      required: [user_id]
+  - name: get_account_info
+    description: 查询用户账户详细信息（备用方案）
+    parameters:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: 用户 ID
+          default: 2001
+      required: [user_id]
+
+expected_tool_calls:
+  - tool: get_balance
+  - tool: get_account_info
+
+mock_apis:
+  get_balance:
+    error: "服务暂时不可用"
+    status: 503
+  get_account_info:
+    user_id: 2001
+    balance: 15000.50
+    status: active
+    last_login: "2026-06-01"
+
+# 规则引擎评分（客观指标）
+rubric:
+  - name: 尝试主工具
+    points: 20
+    criteria: 首先尝试调用 get_balance
+    eval_fn: check_tool_called
+    args: { tool_name: get_balance }
+  - name: 使用备用工具
+    points: 20
+    criteria: 在主工具失败后调用 get_account_info
+    eval_fn: check_tool_called
+    args: { tool_name: get_account_info }
+  - name: 调用顺序正确
+    points: 10
+    criteria: 先调用 get_balance，再调用 get_account_info
+    eval_fn: check_tool_call_sequence
+    args:
+      expected_sequence: [get_balance, get_account_info]
+
+# LLM Judge 评分（主观指标）
+judge_rubric:
+  - name: 错误处理质量
+    points: 25
+    criteria: |
+      Agent 在遇到 get_balance 返回错误后，是否合理地解释了错误原因，
+      并主动切换到备用方案？是否向用户说明了使用备用方案的原因？
+    model: gpt-4o
+  - name: 最终回复质量
+    points: 25
+    criteria: |
+      最终回复是否清晰地告知了用户的账户状态？
+      是否包含了余额信息（15000.50）和账户状态（active）？
+      回复是否专业、清晰、有条理？
+    model: gpt-4o

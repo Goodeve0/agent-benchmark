@@ -1,0 +1,80 @@
+task_id: reasoning_001
+dimension: reasoning
+sub_dimension: plan_execution
+difficulty: hard
+
+prompt: |
+  帮我规划从北京到上海的出差行程：先查询高铁班次，再查询上海的酒店，
+  最后查询当天上海天气，综合给出建议。
+
+tools:
+  - name: search_train
+    description: 查询两地之间的高铁班次
+    parameters:
+      type: object
+      properties:
+        origin:
+          type: string
+          default: 北京
+        destination:
+          type: string
+          default: 上海
+      required: [origin, destination]
+  - name: search_hotel
+    description: 查询指定城市的酒店
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          default: 上海
+      required: [city]
+  - name: get_weather
+    description: 查询指定城市的天气
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          default: 上海
+      required: [city]
+
+expected_tool_calls:
+  - tool: search_train
+  - tool: search_hotel
+  - tool: get_weather
+
+mock_apis:
+  search_train:
+    trains: [G1, G3]
+  search_hotel:
+    hotels: [汉庭, 全季]
+  get_weather:
+    condition: 晴
+
+rubric:
+  - name: 查询高铁
+    points: 20
+    criteria: 调用 search_train
+    eval_fn: check_tool_called
+    args: { tool_name: search_train }
+  - name: 查询酒店
+    points: 20
+    criteria: 调用 search_hotel
+    eval_fn: check_tool_called
+    args: { tool_name: search_hotel }
+  - name: 查询天气
+    points: 20
+    criteria: 调用 get_weather
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 执行顺序合理
+    points: 25
+    criteria: 按 高铁->酒店->天气 顺序执行
+    eval_fn: check_tool_call_sequence
+    args:
+      expected_sequence: [search_train, search_hotel, get_weather]
+  - name: 任务正常完成
+    points: 15
+    criteria: 未超时、未超步数
+    eval_fn: check_task_success
