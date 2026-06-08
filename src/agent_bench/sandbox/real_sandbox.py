@@ -17,7 +17,8 @@ import asyncio
 import copy
 import logging
 import time
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from agent_bench.exceptions import BudgetExceededError, ToolNotFoundError
 from agent_bench.sandbox.sandbox import AuditEntry, AuditLog, _compute_checksum
