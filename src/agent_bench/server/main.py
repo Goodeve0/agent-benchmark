@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+
 import uvicorn
 
 from agent_bench.server.app import create_app
