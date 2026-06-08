@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentbench-sdk"
+version = "0.1.0"
+description = "AgentBench Trace 上报 SDK — 轻量级 Agent 运行数据采集与上报"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "AgentBench" }]
+license = { text = "MIT" }
+keywords = ["agent", "llm", "benchmark", "evaluation", "trace", "sdk"]
+
+dependencies = [
+    "httpx>=0.24",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+langchain = ["langchain-core>=0.2"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentbench_sdk"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

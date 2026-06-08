@@ -489,5 +489,106 @@ def compare(
         console.print(f"\n对比报告已导出: [cyan]{output}[/cyan]")
 
 
+@app.command("score-traces")
+def score_traces(
+    agent: str | None = typer.Option(None, help="按 Agent 名称过滤"),
+    version: str | None = typer.Option(None, help="按 Agent 版本过滤"),
+    task: str | None = typer.Option(None, help="按 task_id 过滤"),
+    dimension: str | None = typer.Option(None, help="只评分指定维度"),
+    db_path: str = typer.Option("data/traces.db", help="Trace 数据库路径"),
+    spec_dir: str = typer.Option(DEFAULT_SPEC_DIR, help="任务规范目录"),
+    output: str | None = typer.Option(None, help="评分结果 JSON 输出路径"),
+    judge: bool = typer.Option(False, help="启用 LLM Judge 混合评分"),
+    judge_model: str = typer.Option("gpt-4o", help="LLM Judge 使用的模型"),
+    judge_mock: bool = typer.Option(False, help="LLM Judge 使用 Mock 模式"),
+) -> None:
+    """对已存储的真实 Trace 进行评分。
+
+    从 Trace 数据库中查询 Trace，转换为 AgentTrace 后使用现有评分引擎打分。
+
+    示例:
+        agent-bench score-traces --agent my-agent --version 1.2.0
+        agent-bench score-traces --task tool_use_001 --judge --judge-mock
+        agent-bench score-traces --dimension tool_use --output scores.json
+    """
+    from agent_bench.trace_store import TraceStore, TraceQuery
+    from agent_bench.models import ScoreReport
+
+    # 初始化 TraceStore
+    store = TraceStore(db_path=db_path)
+
+    # 查询 Trace
+    query = TraceQuery(
+        agent_name=agent,
+        agent_version=version,
+        task_id=task,
+        limit=1000,
+    )
+    summaries, total = store.query_traces(query)
+
+    if not summaries:
+        console.print("[yellow]未找到匹配的 Trace[/yellow]")
+        raise typer.Exit(code=1)
+
+    console.print(f"找到 [cyan]{total}[/cyan] 条 Trace，开始评分...")
+
+    # 加载任务定义
+    try:
+        loader = TaskLoader(spec_dir)
+        tasks = loader.load_all_tasks()
+        task_map = {t.task_id: t for t in tasks}
+    except AgentBenchError:
+        task_map = {}
+
+    # 初始化评分器
+    llm_judge = None
+    if judge or judge_mock:
+        llm_judge = LLMJudge(model=judge_model, mock_mode=judge_mock)
+    scorer = Scorer(llm_judge=llm_judge, spec_dir=spec_dir)
+
+    # 逐条评分
+    reports: list[ScoreReport] = []
+    scored, skipped = 0, 0
+
+    for summary in summaries:
+        # 转换为 AgentTrace
+        agent_trace = store.trace_to_agent_trace(summary.trace_id)
+        if agent_trace is None:
+            skipped += 1
+            continue
+
+        # 查找对应的 Task
+        task_obj = task_map.get(summary.task_id)
+
+        if task_obj is not None:
+            # 有关联的 Task → 完整评分（规则 + LLM Judge）
+            report = asyncio.run(scorer.score_task(agent_trace, task_obj))
+        else:
+            # 无关联 Task → 仅 LLM Judge 自由评分
+            if llm_judge is not None:
+                report = asyncio.run(scorer.score_task_free(agent_trace))
+            else:
+                skipped += 1
+                continue
+
+        reports.append(report)
+        scored += 1
+
+    console.print(f"评分完成: [green]{scored}[/green] 条已评分, [yellow]{skipped}[/yellow] 条跳过")
+
+    # 输出结果
+    if reports:
+        from agent_bench.models import EvaluationResult
+
+        agent_info = {"name": agent or "unknown", "model": "trace-replay", "framework": "sdk"}
+        result = scorer.build_result_from_reports(agent_info, reports)
+        reporter = Reporter(console)
+        reporter.print_table(result)
+
+        if output:
+            reporter.export_json(result, output)
+            console.print(f"\n评分结果已导出: [cyan]{output}[/cyan]")
+
+
 if __name__ == "__main__":
     app()

@@ -455,3 +455,95 @@ class Scorer:
         grader = load_grader(task_id, dim_dir) if dim_dir.exists() else None
         self._grader_cache[task_id] = grader
         return grader
+
+    # ------------------------------------------------------------------ #
+    # 自由评分模式（无 Task 关联，仅用 LLM Judge）
+    # ------------------------------------------------------------------ #
+
+    async def score_task_free(self, trace: AgentTrace) -> ScoreReport:
+        """对无 Task 关联的 Trace 进行自由评分（仅 LLM Judge）。
+
+        当 Trace 来自 SDK 上报、没有对应 YAML 任务定义时使用。
+        使用通用评分模板对 trace 的完成度、安全性、效率进行评分。
+
+        Args:
+            trace: Agent 执行轨迹。
+
+        Returns:
+            ScoreReport。
+        """
+        # 通用评分 rubric
+        from agent_bench.models import JudgeRubricItem
+
+        free_rubric = [
+            JudgeRubricItem(
+                name="任务完成度",
+                points=40.0,
+                criteria="Agent 是否完成了任务目标？最终回复是否合理、完整？",
+            ),
+            JudgeRubricItem(
+                name="工具使用效率",
+                points=30.0,
+                criteria="Agent 的工具调用是否合理？有无冗余调用或遗漏必要调用？",
+            ),
+            JudgeRubricItem(
+                name="推理质量",
+                points=30.0,
+                criteria="Agent 的思考过程是否清晰？是否展现出合理的规划和推理？",
+            ),
+        ]
+
+        details: list[ScoreDetail] = []
+
+        if self._llm_judge is not None:
+            for judge_item in free_rubric:
+                detail = await self._llm_judge.judge_item(
+                    trace, judge_item, task_prompt=trace.final_response or ""
+                )
+                details.append(detail)
+        else:
+            # 没有 LLM Judge → 只能基于简单启发式评分
+            tool_count = len(trace.tool_calls())
+            has_response = bool(trace.final_response)
+            details.append(ScoreDetail(
+                rubric_name="任务完成度",
+                points=30.0 if has_response else 0.0,
+                max_points=40.0,
+                passed=has_response,
+                reason="有最终回复" if has_response else "无最终回复",
+                judge_type="heuristic",
+            ))
+            details.append(ScoreDetail(
+                rubric_name="工具使用效率",
+                points=min(20.0, tool_count * 5.0),
+                max_points=30.0,
+                passed=tool_count > 0,
+                reason=f"调用了 {tool_count} 次工具",
+                judge_type="heuristic",
+            ))
+            details.append(ScoreDetail(
+                rubric_name="推理质量",
+                points=0.0,
+                max_points=30.0,
+                passed=False,
+                reason="无 LLM Judge，无法评估推理质量",
+                judge_type="heuristic",
+            ))
+
+        total = sum(d.points for d in details)
+        max_score = sum(d.max_points for d in details)
+
+        # 从 metadata 推断维度
+        dimension = "unknown"
+        if trace.metadata and "topology" in trace.metadata:
+            dimension = "multi_agent"
+
+        return ScoreReport(
+            task_id=trace.task_id,
+            dimension=dimension,
+            sub_dimension="",
+            difficulty="unknown",
+            scores=details,
+            total_score=round(total, 4),
+            max_score=max_score,
+        )

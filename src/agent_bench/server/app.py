@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from agent_bench.server.routes import api_router, ws_router
 from agent_bench.server.state import AppState
+from agent_bench.server.trace_routes import trace_router
+from agent_bench.trace_store import TraceStore
 
 
 @asynccontextmanager
@@ -23,11 +25,12 @@ async def lifespan(app: FastAPI):
     await state.cancel_all()
 
 
-def create_app(spec_dir: str | None = None) -> FastAPI:
+def create_app(spec_dir: str | None = None, db_path: str | None = None) -> FastAPI:
     """创建 FastAPI 应用实例。
 
     Args:
         spec_dir: 任务规范目录路径。默认使用内置 specs/。
+        db_path: Trace 数据库路径。默认使用环境变量或 data/traces.db。
     """
     app = FastAPI(
         title="AgentBench API",
@@ -51,8 +54,16 @@ def create_app(spec_dir: str | None = None) -> FastAPI:
         spec_dir = str(Path(__file__).parent.parent.parent.parent / "specs")
     app.state.app_state = AppState(spec_dir=spec_dir)
 
+    # 初始化 TraceStore
+    if db_path is None:
+        db_path = os.getenv("AGENT_BENCH_DB_PATH", str(Path("data") / "traces.db"))
+    # 确保目录存在
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    app.state.trace_store = TraceStore(db_path=db_path)
+
     # 注册路由
     app.include_router(api_router, prefix="/api/v1")
+    app.include_router(trace_router, prefix="/api/v1")
     app.include_router(ws_router)
 
     return app
