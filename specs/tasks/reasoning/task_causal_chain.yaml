@@ -1,0 +1,62 @@
+task_id: reasoning_006
+dimension: reasoning
+sub_dimension: causal_reasoning
+difficulty: medium
+
+prompt: |
+  用户想知道在北京今天适合做什么活动。请先查询北京的空气质量，
+  如果空气质量不佳不适合户外，请帮忙推荐室内场馆活动。
+
+tools:
+  - name: get_air_quality
+    description: 查询指定城市的空气质量
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+      required: [city]
+  - name: search_indoor_venues
+    description: 搜索指定城市的室内场馆
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+        activity_type:
+          type: string
+          description: 活动类型
+      required: [city]
+
+expected_tool_calls:
+  - tool: get_air_quality
+    parameters: { city: 北京 }
+  - tool: search_indoor_venues
+    parameters: { city: 北京, activity_type: 娱乐 }
+
+mock_apis:
+  get_air_quality:
+    aqi: 180
+    level: 重度污染
+  search_indoor_venues:
+    venues: [电影院, 博物馆, 室内游乐场]
+
+rubric:
+  - name: 查了空气质量
+    points: 30
+    criteria: 正确调用 get_air_quality 查询北京空气质量
+    eval_fn: check_tool_called
+    args: { tool_name: get_air_quality }
+  - name: 查了室内场馆
+    points: 40
+    criteria: 空气质量不佳时调用了 search_indoor_venues
+    eval_fn: check_tool_called
+    args: { tool_name: search_indoor_venues }
+  - name: 回复包含室内活动建议
+    points: 30
+    criteria: 最终回复包含"室内"相关建议
+    eval_fn: check_response_contains
+    args:
+      keywords: [室内]
