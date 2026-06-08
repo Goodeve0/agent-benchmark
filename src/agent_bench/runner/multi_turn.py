@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from agent_bench.adapters.base import BaseAdapter
 from agent_bench.adapters.user_agent import ConversationTurn, UserAgent
