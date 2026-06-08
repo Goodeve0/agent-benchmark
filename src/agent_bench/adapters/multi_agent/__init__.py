@@ -27,12 +27,28 @@ __all__ = [
 ]
 
 
+def _make_adapter(model: str = "gpt-4o"):
+    """创建一个基础适配器实例（用于多 Agent 内部角色）。
+
+    优先使用 RawAPIAdapter（真实 LLM 调用），若 openai 未安装则降级到 MockAdapter。
+    """
+    try:
+        from agent_bench.adapters.raw_api_adapter import RawAPIAdapter
+        return RawAPIAdapter(model=model)
+    except ImportError:
+        from agent_bench.adapters.mock_adapter import MockAdapter
+        return MockAdapter()
+
+
 def get_multi_agent_adapter(topology: str, **kwargs) -> MultiAgentAdapter:
     """根据拓扑类型创建多 Agent 适配器。
 
+    当 kwargs 中包含 ``model`` 时，会自动为每个角色创建对应的适配器实例。
+    也可以显式传入已构造好的适配器（manager/workers/affirmative/negative/judge/stages）。
+
     Args:
         topology: "manager_worker" | "debate" | "pipeline"
-        **kwargs: 构造参数。
+        **kwargs: 构造参数。支持 ``model`` 键用于自动创建内部适配器。
 
     Returns:
         MultiAgentAdapter 实例。
@@ -40,10 +56,30 @@ def get_multi_agent_adapter(topology: str, **kwargs) -> MultiAgentAdapter:
     Raises:
         ValueError: 未知的拓扑类型。
     """
+    model = kwargs.pop("model", "gpt-4o")
+
     if topology == "manager_worker":
-        return ManagerWorkerAdapter(**kwargs)
+        manager = kwargs.pop("manager", None) or _make_adapter(model)
+        workers = kwargs.pop("workers", None) or [_make_adapter(model) for _ in range(3)]
+        return ManagerWorkerAdapter(manager=manager, workers=workers, **kwargs)
+
     if topology == "debate":
-        return DebateAdapter(**kwargs)
+        affirmative = kwargs.pop("affirmative", None) or _make_adapter(model)
+        negative = kwargs.pop("negative", None) or _make_adapter(model)
+        judge = kwargs.pop("judge", None) or _make_adapter(model)
+        return DebateAdapter(
+            affirmative=affirmative, negative=negative, judge=judge, **kwargs
+        )
+
     if topology == "pipeline":
-        return PipelineAdapter(**kwargs)
+        stages = kwargs.pop("stages", None)
+        if stages is None:
+            # 默认 3 阶段流水线: researcher → writer → reviewer
+            stages = [
+                ("researcher", _make_adapter(model), "负责信息搜集和整理"),
+                ("writer", _make_adapter(model), "负责撰写初稿"),
+                ("reviewer", _make_adapter(model), "负责审核修改"),
+            ]
+        return PipelineAdapter(stages=stages, **kwargs)
+
     raise ValueError(f"未知的多 Agent 拓扑: {topology}（可选: manager_worker, debate, pipeline）")

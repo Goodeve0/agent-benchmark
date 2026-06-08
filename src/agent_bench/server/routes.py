@@ -39,6 +39,9 @@ async def get_task_detail(task_id: str, request: Request):
     return task.model_dump(exclude_none=True)
 
 
+_VALID_ADAPTER_TYPES = {"mock", "raw_api", "data_analyst", "multi_agent"}
+
+
 @api_router.post("/runs")
 async def create_run(config: dict, request: Request):
     """创建并启动一次评测运行。
@@ -52,6 +55,20 @@ async def create_run(config: dict, request: Request):
         "tasks": []  // 空列表表示运行全部任务
     }
     """
+    # 参数校验
+    adapter_type = config.get("adapter_type", "mock")
+    if adapter_type not in _VALID_ADAPTER_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的 adapter_type: {adapter_type}（可选: {', '.join(sorted(_VALID_ADAPTER_TYPES))}）",
+        )
+    num_trials = config.get("num_trials", 1)
+    if not isinstance(num_trials, int) or num_trials < 1:
+        raise HTTPException(status_code=400, detail="num_trials 必须是 >= 1 的整数")
+    max_parallel = config.get("max_parallel", 4)
+    if not isinstance(max_parallel, int) or max_parallel < 1:
+        raise HTTPException(status_code=400, detail="max_parallel 必须是 >= 1 的整数")
+
     state = _get_state_from_request(request)
     run_id = await state.start_run(config)
     return {"run_id": run_id, "status": "running"}

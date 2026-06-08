@@ -56,16 +56,35 @@ class TaskLoader:
 
         tasks: list[Task] = []
         seen_ids: set[str] = set()
+        load_errors: list[str] = []
         for yaml_path in sorted(self.spec_dir.rglob("*.yaml")):
             # 跳过非任务文件（如 dimensions.yaml、rubrics/ 下的文件）
-            raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+            try:
+                raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+            except yaml.YAMLError as e:
+                load_errors.append(f"YAML 解析失败 {yaml_path}: {e}")
+                continue
+
             if not isinstance(raw, dict) or "task_id" not in raw:
                 continue
-            task = self._load_one(yaml_path)
+
+            try:
+                task = self._load_one(yaml_path)
+            except TaskLoadError as e:
+                load_errors.append(str(e))
+                continue
+
             if task.task_id in seen_ids:
                 raise TaskLoadError(f"task_id 重复: {task.task_id} (来自 {yaml_path})")
             seen_ids.add(task.task_id)
             tasks.append(task)
+
+        if load_errors:
+            import logging
+            logger = logging.getLogger(__name__)
+            for err in load_errors:
+                logger.warning("跳过任务文件: %s", err)
+
         return tasks
 
     def load_tasks_by_dimension(self, dimension: str) -> list[Task]:

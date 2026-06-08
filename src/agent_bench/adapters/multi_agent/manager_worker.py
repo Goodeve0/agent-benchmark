@@ -93,6 +93,7 @@ class ManagerWorkerAdapter(MultiAgentAdapter):
         sandbox: Sandbox,
         max_steps: int = 10,
         timeout: int = 60,
+        task_id: str = "",
     ) -> AgentTrace:
         """执行 Manager-Worker 协作流程。"""
         start_time = time.time()
@@ -120,7 +121,7 @@ class ManagerWorkerAdapter(MultiAgentAdapter):
         subtasks = self._parse_subtasks(decompose_trace.final_response)
         if not subtasks:
             return self.build_multi_agent_trace(
-                task_id="",
+                task_id=task_id,
                 all_actions=all_actions,
                 total_tokens=total_tokens,
                 final_response=decompose_trace.final_response,
@@ -214,7 +215,7 @@ class ManagerWorkerAdapter(MultiAgentAdapter):
             all_actions.append(action)
 
         return self.build_multi_agent_trace(
-            task_id="",
+            task_id=task_id,
             all_actions=all_actions,
             total_tokens=total_tokens,
             final_response=synthesize_trace.final_response,

@@ -51,6 +51,7 @@ class MockAdapter(BaseAdapter):
         sandbox: Sandbox,
         max_steps: int = 10,
         timeout: int = 60,
+        task_id: str = "",
     ) -> AgentTrace:
         start = time.time()
         actions: list[AgentAction] = []
@@ -86,7 +87,7 @@ class MockAdapter(BaseAdapter):
         )
 
         return AgentTrace(
-            task_id="",  # 由 EvalRunner 回填
+            task_id=task_id,
             actions=actions,
             total_tokens=step * self.tokens_per_step,
             total_steps=step,

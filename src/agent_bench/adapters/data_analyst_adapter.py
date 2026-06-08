@@ -87,12 +87,15 @@ class DataAnalystAdapter(BaseAdapter):
         sandbox: Sandbox,
         max_steps: int = 10,
         timeout: int = 60,
+        task_id: str = "",
     ) -> AgentTrace:
         try:
-            return await asyncio.wait_for(
+            trace = await asyncio.wait_for(
                 self._run_loop(task_prompt, tools, sandbox, max_steps),
                 timeout=timeout,
             )
+            trace.task_id = task_id
+            return trace
         except asyncio.TimeoutError as e:
             raise AgentTimeoutError(f"DataAnalyst 执行超过 {timeout}s") from e
 

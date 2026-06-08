@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -35,11 +36,12 @@ def create_app(spec_dir: str | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS：允许前端开发服务器跨域访问
+    # CORS：通过环境变量控制允许的来源，生产环境应限制具体域名
+    cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # 开发环境允许所有来源
-        allow_credentials=True,
+        allow_origins=cors_origins,
+        allow_credentials=cors_origins != ["*"],  # 通配符时禁用凭证
         allow_methods=["*"],
         allow_headers=["*"],
     )

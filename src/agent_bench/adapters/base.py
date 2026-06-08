@@ -25,6 +25,7 @@ class BaseAdapter(ABC):
         sandbox: Sandbox,
         max_steps: int = 10,
         timeout: int = 60,
+        task_id: str = "",
     ) -> AgentTrace:
         """运行一个评测任务，返回执行轨迹。
 
@@ -34,6 +35,7 @@ class BaseAdapter(ABC):
             sandbox: 沙箱实例，Agent 调用工具时必须通过 sandbox.execute_tool。
             max_steps: 最大步数限制。
             timeout: 超时秒数。
+            task_id: 任务 ID，用于关联执行轨迹与任务。
 
         Returns:
             AgentTrace: 完整执行轨迹。

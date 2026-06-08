@@ -213,8 +213,8 @@ class EvalRunner:
                 sandbox=sandbox,
                 max_steps=self.max_steps,
                 timeout=self.timeout,
+                task_id=task.task_id,
             )
-            trace.task_id = task.task_id
             # 将沙箱审计日志注入 trace.metadata
             audit_log = sandbox.get_audit_log(freeze=True)
             if trace.metadata is None:

@@ -57,6 +57,8 @@ def run(
     judge_mock: bool = typer.Option(False, help="LLM Judge 使用 Mock 模式（不调用真实 LLM）"),
 ) -> None:
     """运行评测。"""
+    _validate_positive_int(max_steps=max_steps, timeout=timeout, trials=trials, parallel=parallel)
+
     try:
         loader = TaskLoader(spec_dir)
         if task:
@@ -161,6 +163,8 @@ def run_graph(
     - Checkpoint 断点续跑
     - 可视化执行流程
     """
+    _validate_positive_int(max_steps=max_steps, timeout=timeout, trials=trials, parallel=parallel)
+
     try:
         from agent_bench.graph import get_checkpointer, run_eval_graph  # noqa: F401
     except ImportError:
@@ -382,6 +386,14 @@ def list_dimensions(
 # ---- 内部方法 ----
 
 
+def _validate_positive_int(**kwargs: int) -> None:
+    """验证参数为正整数，否则报错退出。"""
+    for name, value in kwargs.items():
+        if value <= 0:
+            console.print(f"[red]参数 --{name} 必须为正整数，当前值: {value}[/red]")
+            raise typer.Exit(code=1)
+
+
 def _build_adapter(agent: str, model: str, topology: str = "manager_worker"):
     """根据 CLI 参数构建适配器。"""
     if agent == "raw_api":
@@ -416,6 +428,8 @@ def compare(
         agent-bench compare --agents mock,data_analyst --judge --judge-mock
         agent-bench compare --agents mock,raw_api --dimension tool_use --output report.json
     """
+    _validate_positive_int(max_steps=max_steps, timeout=timeout)
+
     agent_list = [a.strip() for a in agents.split(",")]
     if len(agent_list) < 2:
         console.print("[red]至少需要 2 个适配器进行对比[/red]")

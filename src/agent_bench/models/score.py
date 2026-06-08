@@ -111,7 +111,6 @@ class TaskTrials(BaseModel):
     trials: list[TrialResult] = Field(default_factory=list)
 
     @computed_field
-    @computed_field
     @property
     def num_trials(self) -> int:
         return len(self.trials)
@@ -122,7 +121,6 @@ class TaskTrials(BaseModel):
         return [t.report.percentage for t in self.trials]
 
     @computed_field
-    @computed_field
     @property
     def mean_score(self) -> float:
         """平均得分率。"""
@@ -131,7 +129,6 @@ class TaskTrials(BaseModel):
         return round(statistics.mean(self.scores), 2)
 
     @computed_field
-    @computed_field
     @property
     def score_variance(self) -> float:
         """得分方差（衡量稳定性）。"""
@@ -139,7 +136,6 @@ class TaskTrials(BaseModel):
             return 0.0
         return round(statistics.variance(self.scores), 4)
 
-    @computed_field
     @computed_field
     @property
     def pass_rate(self) -> float:
@@ -150,7 +146,6 @@ class TaskTrials(BaseModel):
         return round(passed / len(self.trials), 4)
 
     @computed_field
-    @computed_field
     @property
     def pass_k(self) -> bool:
         """Pass^k：所有 trial 是否全部通过。"""
@@ -159,7 +154,6 @@ class TaskTrials(BaseModel):
         return all(t.report.passed for t in self.trials)
 
     @computed_field
-    @computed_field
     @property
     def best_report(self) -> ScoreReport | None:
         """得分最高的 trial 报告。"""
@@ -167,7 +161,6 @@ class TaskTrials(BaseModel):
             return None
         return max(self.trials, key=lambda t: t.report.percentage).report
 
-    @computed_field
     @computed_field
     @property
     def max_score(self) -> float:
@@ -209,6 +202,7 @@ DIMENSION_TO_ORTHOGONAL: dict[str, OrthogonalDimension] = {
     "instruction_following": "completion",
     "efficiency": "completion",
     "safety": "safety",
+    "multi_agent": "completion",
 }
 
 

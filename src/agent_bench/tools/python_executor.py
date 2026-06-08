@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import ast
 import io
 import logging
 from contextlib import redirect_stdout, redirect_stderr
@@ -67,35 +68,51 @@ async def run_python_impl(code: str, timeout: int = 10) -> dict[str, Any]:
 
 
 def _check_safety(code: str) -> str | None:
-    """检查代码安全性。"""
+    """检查代码安全性（基于 AST 解析，防止字符串匹配绕过）。"""
+    # 先做简单字符串快速检查（__import__ 别名等）
     for name in _FORBIDDEN_BUILTINS:
         if name in code:
             return f"代码中包含禁止的函数: {name}"
 
-    for line in code.split("\n"):
-        stripped = line.strip()
-        if stripped.startswith("import ") or stripped.startswith("from "):
-            module_name = _extract_module_name(stripped)
-            top_level = module_name.split(".")[0]
-            if top_level not in _ALLOWED_MODULES and top_level not in ("numpy", "pandas"):
-                return f"禁止导入模块: {module_name}（允许: {', '.join(sorted(_ALLOWED_MODULES))}, numpy, pandas）"
+    # AST 级别的导入检查
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as e:
+        return f"代码语法错误: {e}"
 
+    for node in ast.walk(tree):
+        # 检查 import 语句
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top_level = alias.name.split(".")[0]
+                if top_level not in _ALLOWED_MODULES and top_level not in ("numpy", "pandas"):
+                    return f"禁止导入模块: {alias.name}（允许: {', '.join(sorted(_ALLOWED_MODULES))}, numpy, pandas）"
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                top_level = node.module.split(".")[0]
+                if top_level not in _ALLOWED_MODULES and top_level not in ("numpy", "pandas"):
+                    return f"禁止导入模块: {node.module}（允许: {', '.join(sorted(_ALLOWED_MODULES))}, numpy, pandas）"
+        # 检查对 __import__ 的调用
+        elif isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name) and func.id in _FORBIDDEN_BUILTINS:
+                return f"代码中包含禁止的函数调用: {func.id}"
+            if isinstance(func, ast.Attribute) and func.attr in _FORBIDDEN_BUILTINS:
+                return f"代码中包含禁止的方法调用: {func.attr}"
+        # 检查属性访问 __import__
+        elif isinstance(node, ast.Attribute):
+            if node.attr.startswith("__") and node.attr.endswith("__"):
+                dunder_name = node.attr
+                if dunder_name in ("__import__", "__builtins__"):
+                    return f"代码中包含禁止的属性访问: {dunder_name}"
+
+    # 文件操作字符串检查（保留，作为补充）
     file_ops = ["open(", "with open", ".read(", ".write(", ".readlines("]
     for op in file_ops:
         if op in code:
             return f"代码中包含禁止的文件操作: {op}"
 
     return None
-
-
-def _extract_module_name(statement: str) -> str:
-    """从 import 语句中提取模块名。"""
-    statement = statement.strip()
-    if statement.startswith("import "):
-        return statement.replace("import ", "").split(",")[0].split(" as ")[0].strip()
-    if statement.startswith("from "):
-        return statement.replace("from ", "").split(" import")[0].strip()
-    return ""
 
 
 def _build_safe_globals() -> dict[str, Any]:

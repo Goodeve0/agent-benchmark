@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -14,11 +15,15 @@ from typing import Any
 from fastapi import WebSocket
 
 from agent_bench.adapters import get_adapter
+from agent_bench.adapters.base import BaseAdapter
+from agent_bench.exceptions import TaskLoadError
 from agent_bench.loader import TaskLoader
 from agent_bench.models import EvaluationResult, Task, TaskTrials
 from agent_bench.runner import EvalRunner
 from agent_bench.scorer import Scorer
 from agent_bench.scorer.llm_judge import LLMJudge
+
+logger = logging.getLogger(__name__)
 
 
 class EvalRun:
@@ -68,13 +73,15 @@ class AppState:
         self._lock = asyncio.Lock()
 
     def load_tasks(self) -> None:
-        """加载任务列表。加载失败时记录警告但不阻止服务器启动。"""
+        """加载任务列表。加载失败时记录错误但不阻止服务器启动。"""
         try:
             loader = TaskLoader(self.spec_dir)
             self.tasks = loader.load_all_tasks()
-        except Exception as e:  # noqa: BLE001
-            import warnings
-            warnings.warn(f"任务加载失败: {e}", stacklevel=2)
+        except TaskLoadError as e:
+            logger.error("任务加载失败: %s", e)
+            self.tasks = []
+        except Exception as e:
+            logger.error("任务加载异常: %s", e, exc_info=True)
             self.tasks = []
 
     def get_task_ids(self) -> list[str]:
@@ -139,21 +146,17 @@ class AppState:
                 return
 
             # 创建 adapter
-            adapter_kwargs = {}
-            if adapter_type == "raw_api":
-                adapter_kwargs["model"] = config.get("model", "gpt-4o")
-            elif adapter_type == "data_analyst":
-                adapter_kwargs["model"] = config.get("model", "gpt-4o")
-            elif adapter_type == "multi_agent":
+            adapter: BaseAdapter
+            if adapter_type == "multi_agent":
                 from agent_bench.adapters.multi_agent import get_multi_agent_adapter
                 topology = config.get("topology", "manager_worker")
                 adapter = get_multi_agent_adapter(
                     topology, model=config.get("model", "gpt-4o")
                 )
-                # multi_agent 不走 get_adapter，直接跳过
-                adapter_kwargs = None
-
-            if adapter_kwargs is not None:
+            else:
+                adapter_kwargs: dict[str, Any] = {}
+                if adapter_type in ("raw_api", "data_analyst"):
+                    adapter_kwargs["model"] = config.get("model", "gpt-4o")
                 adapter = get_adapter(adapter_type, **adapter_kwargs)
 
             # 创建 scorer
@@ -304,8 +307,9 @@ class AppState:
             "type": "progress",
             "data": run.to_dict(),
         }, ensure_ascii=False, default=str)
+        # 使用列表副本迭代，避免迭代中 disconnect_ws 修改原列表
         dead: list[WebSocket] = []
-        for ws in self.ws_connections:
+        for ws in list(self.ws_connections):
             try:
                 await ws.send_text(msg)
             except Exception:

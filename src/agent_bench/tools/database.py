@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -70,13 +71,17 @@ async def describe_table_impl(table_name: str) -> dict[str, Any]:
     Returns:
         表结构信息字典。
     """
+    # 校验表名：只允许字母、数字、下划线
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+        return {"error": f"非法表名: {table_name}", "table_name": table_name}
+
     db_path = _get_db_path()
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # 获取列信息
-        cursor.execute(f"PRAGMA table_info([{table_name}])")
+        # 获取列信息（使用参数化占位不适用于 PRAGMA，但已通过正则校验表名安全性）
+        cursor.execute(f'PRAGMA table_info("{table_name}")')
         columns = [
             {
                 "name": row[1],
@@ -89,7 +94,7 @@ async def describe_table_impl(table_name: str) -> dict[str, Any]:
         ]
 
         # 获取行数
-        cursor.execute(f"SELECT COUNT(*) FROM [{table_name}]")
+        cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
         row_count = cursor.fetchone()[0]
 
         conn.close()

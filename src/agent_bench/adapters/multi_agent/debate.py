@@ -109,6 +109,7 @@ class DebateAdapter(MultiAgentAdapter):
         sandbox: Sandbox,
         max_steps: int = 10,
         timeout: int = 60,
+        task_id: str = "",
     ) -> AgentTrace:
         """执行辩论流程。"""
         start_time = time.time()
@@ -187,7 +188,7 @@ class DebateAdapter(MultiAgentAdapter):
         ))
 
         return self.build_multi_agent_trace(
-            task_id="",
+            task_id=task_id,
             all_actions=all_actions,
             total_tokens=total_tokens,
             final_response=judge_trace.final_response,

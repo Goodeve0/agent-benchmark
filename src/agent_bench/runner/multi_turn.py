@@ -108,6 +108,7 @@ class MultiTurnRunner:
                     sandbox=sandbox,
                     max_steps=self.max_steps_per_turn,
                     timeout=self.timeout_per_turn,
+                    task_id=task.task_id,
                 )
             except Exception as e:  # noqa: BLE001
                 # Agent 执行失败，记录错误并结束

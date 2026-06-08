@@ -74,6 +74,7 @@ class PipelineAdapter(MultiAgentAdapter):
         sandbox: Sandbox,
         max_steps: int = 10,
         timeout: int = 60,
+        task_id: str = "",
     ) -> AgentTrace:
         """执行流水线协作流程。"""
         start_time = time.time()
@@ -141,7 +142,7 @@ class PipelineAdapter(MultiAgentAdapter):
                 ))
 
                 return self.build_multi_agent_trace(
-                    task_id="",
+                    task_id=task_id,
                     all_actions=all_actions,
                     total_tokens=total_tokens,
                     final_response=f"流水线在 {stage_name} 阶段失败: {e}",
@@ -151,7 +152,7 @@ class PipelineAdapter(MultiAgentAdapter):
                 )
 
         return self.build_multi_agent_trace(
-            task_id="",
+            task_id=task_id,
             all_actions=all_actions,
             total_tokens=total_tokens,
             final_response=intermediate_result,

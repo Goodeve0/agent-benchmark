@@ -1,4 +1,4 @@
-FROM python:3.10-slim AS backend
+FROM python:3.11-slim AS backend
 
 WORKDIR /app
 
@@ -7,12 +7,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 Python 依赖
+# 先安装依赖（利用 Docker 层缓存）
 COPY pyproject.toml .
+RUN pip install --no-cache-dir -e ".[all]" || true
 COPY src/ src/
-COPY specs/ specs/
+RUN pip install --no-cache-dir -e ".[all]"
 
-RUN pip install --no-cache-dir -e ".[all,dev]"
+COPY specs/ specs/
 
 # 前端构建
 FROM node:18-slim AS frontend
@@ -23,15 +24,16 @@ COPY web/ .
 RUN npm run build
 
 # 最终镜像
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# 复制后端
+# 复制后端（含已安装的依赖）
 COPY --from=backend /app/src/ /app/src/
 COPY --from=backend /app/pyproject.toml /app/
 COPY --from=backend /app/specs/ /app/specs/
-RUN pip install --no-cache-dir -e ".[all]"
+COPY --from=backend /usr/local/lib/ /usr/local/lib/
+COPY --from=backend /usr/local/bin/ /usr/local/bin/
 
 # 复制前端构建产物
 COPY --from=frontend /app/web/dist/ /app/web/dist/
