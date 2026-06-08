@@ -1,0 +1,80 @@
+task_id: tool_use_006
+dimension: tool_use
+sub_dimension: tool_chaining
+difficulty: hard
+
+prompt: |
+  用户需要先登录系统，然后获取自己的用户信息和历史订单。
+  请按顺序完成：登录 → 获取用户信息 → 获取订单列表。
+
+tools:
+  - name: login
+    description: 用户登录，返回认证令牌
+    parameters:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 用户名
+        password:
+          type: string
+          description: 密码
+      required: [username, password]
+  - name: get_user_info
+    description: 获取用户信息
+    parameters:
+      type: object
+      properties:
+        token:
+          type: string
+          description: 认证令牌
+      required: [token]
+  - name: get_orders
+    description: 获取用户订单列表
+    parameters:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: 用户ID
+      required: [user_id]
+
+expected_tool_calls:
+  - tool: login
+    parameters: { username: user, password: pass }
+  - tool: get_user_info
+    parameters: { token: mock_token_123 }
+  - tool: get_orders
+    parameters: { user_id: u001 }
+
+mock_apis:
+  login:
+    token: mock_token_123
+  get_user_info:
+    user_id: u001
+    name: 张三
+  get_orders:
+    orders: [order_001, order_002]
+
+rubric:
+  - name: 调用了登录工具
+    points: 20
+    criteria: 正确调用 login
+    eval_fn: check_tool_called
+    args: { tool_name: login }
+  - name: 调用了用户信息工具
+    points: 20
+    criteria: 正确调用 get_user_info
+    eval_fn: check_tool_called
+    args: { tool_name: get_user_info }
+  - name: 调用了订单工具
+    points: 20
+    criteria: 正确调用 get_orders
+    eval_fn: check_tool_called
+    args: { tool_name: get_orders }
+  - name: 调用顺序正确
+    points: 40
+    criteria: 按 login → get_user_info → get_orders 顺序调用
+    eval_fn: check_tool_call_sequence
+    args:
+      expected_sequence: [login, get_user_info, get_orders]
