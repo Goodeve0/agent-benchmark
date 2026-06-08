@@ -12,9 +12,9 @@
 - 协作过程中的审计日志
 """
 
-from agent_bench.adapters.multi_agent.base import MultiAgentAdapter, AgentRole
-from agent_bench.adapters.multi_agent.manager_worker import ManagerWorkerAdapter
+from agent_bench.adapters.multi_agent.base import AgentRole, MultiAgentAdapter
 from agent_bench.adapters.multi_agent.debate import DebateAdapter
+from agent_bench.adapters.multi_agent.manager_worker import ManagerWorkerAdapter
 from agent_bench.adapters.multi_agent.pipeline import PipelineAdapter
 
 __all__ = [
