@@ -1,0 +1,57 @@
+task_id: tool_use_002
+dimension: tool_use
+sub_dimension: parallel_call
+difficulty: medium
+
+prompt: |
+  用户要对比北京和上海今天的天气。请同时查询两城市的天气，
+  然后给出对比结果。
+
+tools:
+  - name: get_weather
+    description: 查询指定城市的天气信息
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 城市名称
+      required: [city]
+
+expected_tool_calls:
+  - tool: get_weather
+    parameters: { city: 北京 }
+  - tool: get_weather
+    parameters: { city: 上海 }
+
+mock_apis:
+  get_weather:
+    - condition: 雨
+      temp: 18
+      city: 北京
+    - condition: 晴
+      temp: 25
+      city: 上海
+
+rubric:
+  - name: 调用北京天气
+    points: 25
+    criteria: 正确调用 get_weather 查询北京天气
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 调用上海天气
+    points: 25
+    criteria: 正确调用 get_weather 查询上海天气
+    eval_fn: check_tool_called
+    args: { tool_name: get_weather }
+  - name: 两次调用都完成
+    points: 25
+    criteria: 至少完成2步工具调用
+    eval_fn: check_step_count
+    args: { min_steps: 2 }
+  - name: 回复包含两城市天气
+    points: 25
+    criteria: 最终回复同时包含北京和上海
+    eval_fn: check_response_contains
+    args:
+      keywords: [北京, 上海]
