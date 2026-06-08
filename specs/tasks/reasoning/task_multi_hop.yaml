@@ -1,0 +1,76 @@
+task_id: reasoning_007
+dimension: reasoning
+sub_dimension: multi_hop_reasoning
+difficulty: hard
+
+prompt: |
+  用户想了解科技巨头 XYZ 公司的CEO的教育背景。请先查询公司CEO是谁，
+  然后查询该人的教育背景，最后查询其毕业大学的排名。
+
+tools:
+  - name: get_company_info
+    description: 查询公司基本信息
+    parameters:
+      type: object
+      properties:
+        company_name:
+          type: string
+          description: 公司名称
+      required: [company_name]
+  - name: get_person_info
+    description: 查询人物信息
+    parameters:
+      type: object
+      properties:
+        person_name:
+          type: string
+          description: 人物姓名
+      required: [person_name]
+  - name: get_university_ranking
+    description: 查询大学排名
+    parameters:
+      type: object
+      properties:
+        university_name:
+          type: string
+          description: 大学名称
+      required: [university_name]
+
+expected_tool_calls:
+  - tool: get_company_info
+    parameters: { company_name: XYZ公司 }
+  - tool: get_person_info
+    parameters: { person_name: 李明 }
+  - tool: get_university_ranking
+    parameters: { university_name: 清华大学 }
+
+mock_apis:
+  get_company_info:
+    ceo: 李明
+  get_person_info:
+    education: 清华大学
+  get_university_ranking:
+    rank: 1
+
+rubric:
+  - name: 调用了公司信息工具
+    points: 20
+    criteria: 正确调用 get_company_info 查询CEO
+    eval_fn: check_tool_called
+    args: { tool_name: get_company_info }
+  - name: 调用了人物信息工具
+    points: 20
+    criteria: 正确调用 get_person_info 查询教育背景
+    eval_fn: check_tool_called
+    args: { tool_name: get_person_info }
+  - name: 调用了大学排名工具
+    points: 20
+    criteria: 正确调用 get_university_ranking 查询排名
+    eval_fn: check_tool_called
+    args: { tool_name: get_university_ranking }
+  - name: 调用顺序正确
+    points: 40
+    criteria: 按 get_company_info → get_person_info → get_university_ranking 顺序调用
+    eval_fn: check_tool_call_sequence
+    args:
+      expected_sequence: [get_company_info, get_person_info, get_university_ranking]
