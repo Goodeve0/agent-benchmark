@@ -199,7 +199,7 @@ class Scorer:
             raise ScoringError(
                 f"traces 与 tasks 数量不一致: {len(traces)} != {len(tasks)}"
             )
-        return [self.score_task_sync(trace, task) for trace, task in zip(traces, tasks)]
+        return [self.score_task_sync(trace, task) for trace, task in zip(traces, tasks, strict=False)]
 
     # ------------------------------------------------------------------ #
     # 维度聚合
