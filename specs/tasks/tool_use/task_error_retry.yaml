@@ -1,0 +1,43 @@
+task_id: tool_use_003
+dimension: tool_use
+sub_dimension: error_recovery
+difficulty: hard
+
+prompt: |
+  用户想查询股票 AAPL 的当前价格。请调用工具查询。
+
+tools:
+  - name: get_stock_price
+    description: 查询指定股票的当前价格
+    parameters:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: 股票代码
+      required: [symbol]
+
+expected_tool_calls:
+  - tool: get_stock_price
+    parameters: { symbol: AAPL }
+
+mock_apis:
+  get_stock_price:
+    error: rate_limit
+    retry_after: 1
+
+rubric:
+  - name: 调用了工具
+    points: 40
+    criteria: 正确调用 get_stock_price 查询股票价格
+    eval_fn: check_tool_called
+    args: { tool_name: get_stock_price }
+  - name: 步骤数合理
+    points: 30
+    criteria: 步骤数不超过6步，体现了错误识别与重试逻辑
+    eval_fn: check_step_count
+    args: { max_steps: 6 }
+  - name: 任务完成
+    points: 30
+    criteria: 正确处理错误并给出合理的回复
+    eval_fn: check_task_success
