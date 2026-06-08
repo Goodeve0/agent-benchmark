@@ -1,0 +1,50 @@
+task_id: reasoning_004
+dimension: reasoning
+sub_dimension: information_synthesis
+difficulty: hard
+
+prompt: |
+  用户想买一款蓝牙耳机，预算300元左右。请查询以下三个竞品的信息，
+  并综合对比后给出购买建议：产品A、产品B、产品C。
+
+tools:
+  - name: get_product_info
+    description: 查询指定产品的详细信息
+    parameters:
+      type: object
+      properties:
+        product_name:
+          type: string
+          description: 产品名称
+      required: [product_name]
+
+expected_tool_calls:
+  - tool: get_product_info
+    parameters: { product_name: 产品A }
+  - tool: get_product_info
+    parameters: { product_name: 产品B }
+  - tool: get_product_info
+    parameters: { product_name: 产品C }
+
+mock_apis:
+  get_product_info:
+    price: 299
+    rating: 4.5
+
+rubric:
+  - name: 调用了产品查询工具
+    points: 30
+    criteria: 正确调用 get_product_info 查询竞品信息
+    eval_fn: check_tool_called
+    args: { tool_name: get_product_info }
+  - name: 步骤数合理
+    points: 30
+    criteria: 步骤数不超过8步，体现了多产品信息查询
+    eval_fn: check_step_count
+    args: { max_steps: 8 }
+  - name: 回复包含购买建议
+    points: 40
+    criteria: 综合对比后给出推荐或建议
+    eval_fn: check_response_contains
+    args:
+      keywords: [建议, 推荐]
