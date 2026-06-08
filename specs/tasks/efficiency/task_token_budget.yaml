@@ -1,0 +1,41 @@
+task_id: efficiency_002
+dimension: efficiency
+sub_dimension: token_efficiency
+difficulty: medium
+
+prompt: |
+  用户想快速了解今天股市概况，请用最少步骤和简洁语言回复。
+
+tools:
+  - name: get_market_summary
+    description: 获取股市概况摘要
+    parameters:
+      type: object
+      properties: {}
+
+expected_tool_calls:
+  - tool: get_market_summary
+    parameters: {}
+
+mock_apis:
+  get_market_summary:
+    shanghai: 上涨0.5%
+    shenzhen: 下跌0.3%
+    trend: 震荡
+
+rubric:
+  - name: 调用了工具
+    points: 40
+    criteria: 正确调用 get_market_summary 获取股市概况
+    eval_fn: check_tool_called
+    args: { tool_name: get_market_summary }
+  - name: Token预算内
+    points: 30
+    criteria: 输出简洁，token使用在预算内
+    eval_fn: check_token_efficiency
+    args: { max_tokens: 500 }
+  - name: 步骤少
+    points: 30
+    criteria: 不超过2步完成任务
+    eval_fn: check_step_count
+    args: { max_steps: 2 }
